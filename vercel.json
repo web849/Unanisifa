@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run db:migrate && next build",
+  "crons": [
+    {
+      "path": "/api/cron/retry-notifications",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
