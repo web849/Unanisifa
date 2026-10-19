@@ -57,7 +57,7 @@ async function main() {
 
     console.log(`[migrate] applying ${file} (${statements.length} statements)...`);
     for (const statement of statements) {
-      await sql(statement);
+      await sql.query(statement);
     }
 
     await sql`INSERT INTO "__migrations" ("name") VALUES (${file})`;
