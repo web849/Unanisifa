@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PackageSearch, X } from "lucide-react";
 import type { DrawerCategory } from "./category-drawer";
-import { categoryIcon } from "./category-drawer";
+import { categoryIcon } from "./category-icons";
 
 export function CategoryDrawerClient({ categories }: { categories: DrawerCategory[] }) {
   const [open, setOpen] = useState(false);
