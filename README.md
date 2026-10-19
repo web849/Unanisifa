@@ -88,7 +88,23 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 3. Landing Pages → New → টেমপলেট থেকে সেকশন সাজান → অর্ডার ফর্ম যোগ → Published।
 4. Coupons → প্রয়োজনে নতুন কুপন (landing-scoped করা যায়)।
 5. Integrations → Meta Pixel ID + CAPI token দিলে ViewContent/Lead/AddToCart/InitiateCheckout/Purchase ইভেন্ট চলবে (purchase trigger: confirmed/delivered বেছে নেওয়া যায়)।
-6. ফেসবুক অ্যাডে `/offer/[slug]` লিংক দিন। অর্ডার পড়লে Dashboard-এ ফ্রড-স্ট্যাটাসসহ দেখা যাবে; কুরিয়ার ডিসপ্যাচ ম্যানুয়ালি মার্ক করা হয় (Pending — কারণ দেখানো থাকে)।
+6. ফেসবুক অ্যাডে `/offer/[slug]` লিংক দিন। অর্ডার পড়লে Dashboard-এ ফ্রড-স্ট্যাটাসসহ দেখা যাবে।
+7. Couriers → Steadfast বা Pathao-র API কী বসিয়ে কানেক্ট করুন (নিচের সেকশন দেখুন)।
+
+## কুরিয়ার API ও অটোমেশন
+
+অ্যাডমিন **Couriers** পেজ থেকেই সরাসরি কুরিয়ার API কানেক্ট করা যায় — কোনো env বা কোড বদল লাগে না:
+
+| কুরিয়ার | যা লাগবে | কোথায় পাবেন |
+|---|---|---|
+| **Steadfast** | API Key + Secret Key | portal.packzy.com > Settings > API |
+| **Pathao** | Client ID + Client Secret + মার্চেন্ট ইমেইল/পাসওয়ার্ড (+ঐচ্ছিক Store ID) | merchant.pathao.com > Developer API |
+
+- কী বসিয়ে **Save credentials** (AES-256 এনক্রিপ্ট হয়ে ডেটাবেজে থাকে, আর কখনো দেখানো হয় না), তারপর **Test connection** — লাইভ API কল করে যাচাই হয় (Steadfast: ব্যালেন্স, Pathao: store তালিকা)। ঠিক থাকলে **Make default** করুন।
+- **অটোমেশন** (ডিফল্ট চালু): অর্ডার **shipped** মার্ক করলেই default কুরিয়ারে অটোমেটিক কনসাইনমেন্ট বুক হয় (COD = অর্ডারের due amount)। অর্ডার পেজের Courier প্যানেল থেকে হাতে বুকিং/"Sync status"-ও করা যায়।
+- **স্ট্যাটাস সিঙ্ক**: Sync করলে delivered পার্সেলের অর্ডার অটোমেটিক delivered হয় (পেমেন্ট paid + কাস্টমার নোটিফিকেশনসহ)। cancelled/returned/partial হলে শিপমেন্টে অ্যাটেনশন নোট পড়ে — অর্ডার অটো-ক্যানসেল হয় না (স্টক/COD যাচাই করে নিজে সিদ্ধান্ত নিন)।
+- সিঙ্কের উপায়: Couriers পেজে "Sync all statuses" বোতাম, অর্ডার পেজে "Sync status", দৈনিক ক্রনে একবার, আর `GET/POST /api/cron/courier-sync` (`Authorization: Bearer <CRON_SECRET>`) — ঘন ঘন চাইলে Vercel Pro-তে `vercel.json`-এ ৩০ মিনিটের ক্রন যোগ করুন বা বাইরের ফ্রি ক্রন সার্ভিস থেকে এই URL কল করুন।
+- API কানেক্ট না করলেও **Manual Handover** মোডে shipped মার্ক করলে হস্তান্তরের রেকর্ড থাকে।
 
 ## নীতি ও সীমাবদ্ধতা (সৎভাবে)
 

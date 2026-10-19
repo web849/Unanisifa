@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 import { ShieldAlert } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { OrderActions } from "@/components/admin/order-actions";
+import { OrderCourierPanel } from "@/components/admin/order-courier-panel";
 import { getAdminSession } from "@/lib/auth/session";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
-import { courierShipments, orderItems, orderStatusHistory, orders } from "@/lib/db/schema";
+import { courierProviders, courierShipments, orderItems, orderStatusHistory, orders } from "@/lib/db/schema";
+import { trackingUrlFor } from "@/lib/couriers/types";
+import { ensureCourierProviders } from "@/lib/couriers/service";
 import { eq } from "drizzle-orm";
 import { nextStatuses, ORDER_STATUS_LABEL } from "@/lib/orders/status";
 import { formatDateEn, formatTakaEn } from "@/lib/utils";
@@ -20,15 +23,50 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   if (!isDatabaseConfigured) notFound();
 
   const db = requireDb("অর্ডার");
+  await ensureCourierProviders(db);
   const rows = await db.select().from(orders).where(eq(orders.id, Number(id))).limit(1);
   const order = rows[0];
   if (!order) notFound();
 
-  const [items, history, shipments] = await Promise.all([
+  const [items, history, shipmentRows, courierProviderRows] = await Promise.all([
     db.select().from(orderItems).where(eq(orderItems.orderId, order.id)),
     db.select().from(orderStatusHistory).where(eq(orderStatusHistory.orderId, order.id)).orderBy(orderStatusHistory.id),
-    db.select().from(courierShipments).where(eq(courierShipments.orderId, order.id)),
+    db
+      .select({
+        status: courierShipments.status,
+        consignmentId: courierShipments.consignmentId,
+        trackingNumber: courierShipments.trackingNumber,
+        providerName: courierProviders.name,
+        providerAdapter: courierProviders.adapter,
+        lastError: courierShipments.lastError,
+        handedOverAt: courierShipments.handedOverAt,
+        lastSyncedAt: courierShipments.lastSyncedAt,
+      })
+      .from(courierShipments)
+      .leftJoin(courierProviders, eq(courierShipments.providerId, courierProviders.id))
+      .where(eq(courierShipments.orderId, order.id))
+      .limit(1),
+    db
+      .select({
+        id: courierProviders.id,
+        name: courierProviders.name,
+        adapter: courierProviders.adapter,
+        isDefault: courierProviders.isDefault,
+      })
+      .from(courierProviders)
+      .where(eq(courierProviders.enabled, true))
+      .orderBy(courierProviders.id),
   ]);
+  const courierShipment = shipmentRows[0]
+    ? {
+        ...shipmentRows[0],
+        trackingUrl: trackingUrlFor(
+          shipmentRows[0].providerAdapter ?? "",
+          shipmentRows[0].trackingNumber,
+          shipmentRows[0].consignmentId,
+        ),
+      }
+    : null;
 
   const fraudReasons = Array.isArray(order.fraudReasons) ? (order.fraudReasons as string[]) : [];
   const next = nextStatuses(order.status as OrderStatusValue);
@@ -126,22 +164,12 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             </div>
           </div>
 
-          {shipments.length > 0 ? (
-            <div className="panel">
-              <div className="panel-head">
-                <h2 className="panel-title">Courier</h2>
-              </div>
-              <div className="panel-body stack stack-sm">
-                {shipments.map((shipment) => (
-                  <p key={shipment.id} className="mb-0 text-small">
-                    {shipment.status} · {shipment.trackingNumber ?? shipment.consignmentId ?? "no tracking"} ·{" "}
-                    <span className={shipment.lastError ? "error-text" : "text-muted"}>{shipment.lastError ?? "ok"}</span>
-                    {shipment.handedOverAt ? ` · handed over ${formatDateEn(shipment.handedOverAt)}` : ""}
-                  </p>
-                ))}
-              </div>
-            </div>
-          ) : null}
+          <OrderCourierPanel
+            orderId={order.id}
+            orderStatus={order.status}
+            providers={courierProviderRows}
+            shipment={courierShipment}
+          />
         </div>
 
         <div className="stack stack-md">
