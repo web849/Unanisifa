@@ -4,23 +4,24 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
-import type { adminNavGroups } from "./admin-shell";
+import { adminNavGroups, type AdminNavCounts } from "./admin-nav";
 import { DEFAULT_BRAND } from "@/lib/config";
 
-type Groups = ReturnType<typeof adminNavGroups>;
-
 export function AdminShellClient({
-  groups,
+  counts,
   sessionName,
   sessionRole,
 }: {
-  groups: Groups;
+  counts: AdminNavCounts;
   sessionName: string;
   sessionRole: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  // নেভিগেশন এখানেই তৈরি হয় — Server Component থেকে আইকন (ফাংশন) প্রপ হিসেবে
+  // পাঠানো যায় না, তাই ক্লায়েন্টেই কনফিগ থেকে গ্রুপ বানানো হয়।
+  const groups = adminNavGroups(counts);
 
   useEffect(() => {
     setOpen(false);
