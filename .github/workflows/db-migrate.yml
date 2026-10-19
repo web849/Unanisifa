@@ -19,7 +19,11 @@ on:
         type: boolean
         default: false
       bootstrap_admin:
-        description: "Create owner admin from ADMIN_EMAIL / ADMIN_PASSWORD secrets"
+        description: "Create owner admin from ADMIN_EMAIL / ADMIN_PASSWORD secrets (no-op if it already exists)"
+        type: boolean
+        default: false
+      reset_admin_password:
+        description: "Reset the existing ADMIN_EMAIL password from ADMIN_PASSWORD secret"
         type: boolean
         default: false
 
@@ -126,5 +130,22 @@ jobs:
           printf '%s\n' "$SANITIZED"
           if [ "$CODE" -ne 0 ]; then
             printf '::error::bootstrap-admin ব্যর্থ (exit %s): %s\n' "$CODE" "$(printf '%s' "$SANITIZED" | tr '\n' ' ' | cut -c1-450)"
+            exit "$CODE"
+          fi
+
+      - name: Reset existing admin password
+        if: ${{ github.event.inputs.reset_admin_password == 'true' }}
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          set +e
+          OUT=$(npm run db:reset-admin-password 2>&1)
+          CODE=$?
+          set -e
+          SANITIZED=$(printf '%s' "$OUT" | sed -E 's|postgres(ql)?://[^@/[:space:]]+@|postgres://***:***@|g' | tail -n 20)
+          printf '%s\n' "$SANITIZED"
+          if [ "$CODE" -ne 0 ]; then
+            printf '::error::admin password reset failed (exit %s): %s\n' "$CODE" "$(printf '%s' "$SANITIZED" | tr '\n' ' ' | cut -c1-450)"
             exit "$CODE"
           fi

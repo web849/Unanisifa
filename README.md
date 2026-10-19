@@ -36,7 +36,7 @@ npm run db:seed              # সেটিংস, পেমেন্ট/কু�
 npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL/ADMIN_PASSWORD env বা আর্গুমেন্ট)
 ```
 
-- অ্যাডমিন লগিন: `/admin` → bootstrap করা ইমেইল/পাসওয়ার্ড।
+- অ্যাডমিন লগিন: `/admin` → bootstrap করা ইমেইল/পাসওয়ার্ড। পাসওয়ার্ড ভুলে গেলে `ADMIN_EMAIL` ও নতুন `ADMIN_PASSWORD` Actions secrets-এ দিয়ে `db-migrate` workflow-তে **Reset existing admin password** চালান; এতে ওই অ্যাকাউন্টের সেশনগুলো বাতিল হবে।
 - ডেমো ডেটা মুছতে: `npm run cleanup:demo` (আগে dry-run দেখায়; `--yes` দিলে মুছে ফেলে। আসল অর্ডার/কাস্টমার অছোঁয়া থাকে)।
 
 ### প্রয়োজনীয় env (বিস্তারিত `.env.example`-এ)
@@ -63,7 +63,8 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 | `npm run db:generate` | স্কিমা বদলালে drizzle-kit দিয়ে নতুন মাইগ্রেশন |
 | `npm run db:migrate` | কমিট করা SQL মাইগ্রেশন প্রয়োগ |
 | `npm run db:seed` / `db:seed-catalog` | সেটিংস+কুপন / ডেমো পণ্য-ক্যাটাগরি-ব্যানার-CMS |
-| `npm run db:bootstrap-admin` | প্রথম owner অ্যাকাউন্ট |
+| `npm run db:bootstrap-admin` | প্রথম owner অ্যাকাউন্ট (আগে থাকলে বদলায় না) |
+| `npm run db:reset-admin-password` | বিদ্যমান অ্যাডমিনের পাসওয়ার্ড রিসেট; `ADMIN_EMAIL` + `ADMIN_PASSWORD` লাগে, সেশন বাতিল হয় |
 | `npm run cleanup:demo` | ডেমো ডেটা রিমুভ (dry-run ডিফল্ট) |
 | `npm run assets:demo` | ডেমো পণ্য/ব্যানার SVG অ্যাসেট রিজেনারেট |
 
