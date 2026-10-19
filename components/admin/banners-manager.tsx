@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { formatDateEn } from "@/lib/utils";
+import { ImageField } from "@/components/admin/image-field";
 
 export type BannerRow = {
   id: number;
@@ -88,16 +89,16 @@ export function BannersManager({ initial }: { initial: BannerRow[] }) {
             <span className="label">Title (Bangla)</span>
             <input className="input" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} required />
           </label>
-          <label className="field">
-            <span className="label">Image URL (1200×480)</span>
-            <input
-              className="input"
-              value={draft.imageUrl}
-              onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })}
-              required
-              placeholder="/banners/b-01.svg"
-            />
-          </label>
+          <ImageField
+            label="Image (1200×480)"
+            value={draft.imageUrl}
+            onChange={(url) => setDraft({ ...draft, imageUrl: url })}
+            folder="banners"
+            required
+            placeholder="/banners/b-01.svg"
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+            alt={draft.title}
+          />
           <label className="field">
             <span className="label">Link URL</span>
             <input

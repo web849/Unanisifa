@@ -50,7 +50,7 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 | `CRON_SECRET` | `/api/cron/*` প্রটেকশন | ক্রন ৪০১ ফেরত দেয় |
 | `NEXT_PUBLIC_SITE_URL` | canonical/OG/ওয়েবহুক লিংক | লোকাল URL ধরা হয় |
 | `ALLOW_PREVIEW_DB_MIGRATIONS` | Vercel **Preview** বিল্ডে মাইগ্রেশন চালু | Preview-তে মাইগ্রেশন হয় না (প্রোডাকশন সুরক্ষিত) |
-| `R2_*` (৫টি) | মিডিয়া আপলোড (Cloudflare R2) | আপলোড বন্ধ; "URL পেস্ট করুন" চালু |
+| `R2_*` (৫টি) | মিডিয়া আপলোড (Cloudflare R2, ঐচ্ছিক) | আপলোড ডেটাবেজে সেভ হয়; সরাসরি আপলোড সব ফর্মেই চলে |
 | `TELEGRAM_*`, `RESEND_*`, `META_*` | নোটিফিকেশন/ট্র্যাকিং ডিফল্ট | অ্যাডমিন ভল্টে সেভ করলেও চলে; না থাকলে Pending |
 
 **সিক্রেট কখনো ব্রাউজারে যায় না**: ইন্টিগ্রেশন ক্রেডেনশিয়াল AES-256-GCM-এ এনক্রিপ্ট হয়ে ডেটাবেজে থাকে (`credential_secrets`); API শুধু "set / not set" ফেরত দেয়।

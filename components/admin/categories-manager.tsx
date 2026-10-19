@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
+import { ImageField } from "@/components/admin/image-field";
 
 export type CategoryRow = {
   id: number;
@@ -80,15 +81,15 @@ export function CategoriesManager({ initial }: { initial: CategoryRow[] }) {
             <span className="label">Slug</span>
             <input className="input mono" value={draft.slug} onChange={(e) => setDraft({ ...draft, slug: e.target.value })} placeholder="auto" />
           </label>
-          <label className="field">
-            <span className="label">Cover image URL</span>
-            <input
-              className="input"
-              value={draft.coverImage}
-              onChange={(e) => setDraft({ ...draft, coverImage: e.target.value })}
-              placeholder="/categories/c-01.svg"
-            />
-          </label>
+          <ImageField
+            label="Cover image"
+            value={draft.coverImage}
+            onChange={(url) => setDraft({ ...draft, coverImage: url })}
+            folder="categories"
+            placeholder="/categories/c-01.svg"
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+            alt={draft.name}
+          />
           <label className="field">
             <span className="label">Icon (lucide name)</span>
             <input className="input mono" value={draft.icon} onChange={(e) => setDraft({ ...draft, icon: e.target.value })} placeholder="Leaf" />

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Trash2 } from "lucide-react";
+import { ImagePlus, Save, Trash2 } from "lucide-react";
 import { toEnglishDigits } from "@/lib/utils";
+import { IMAGE_ACCEPT, uploadImageFile } from "@/components/admin/image-field";
 
 export type ProductFormInitial = {
   name: string;
@@ -78,6 +79,9 @@ export function ProductForm({
   const [imageAlt, setImageAlt] = useState("");
   const [message, setMessage] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const productFilesRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof ProductFormInitial>(key: K, value: ProductFormInitial[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -90,6 +94,49 @@ export function ProductForm({
     set("images", [...form.images, { url, alt: imageAlt.trim() }]);
     setImageUrl("");
     setImageAlt("");
+  };
+
+  /** ডিভাইস থেকে এক বা একাধিক ছবি সরাসরি আপলোড করে লিস্টে যোগ করে */
+  const uploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const batch = Array.from(files).slice(0, Math.max(0, 8 - form.images.length));
+    if (batch.length === 0) {
+      setUploadError("সর্বোচ্চ ৮টি ছবি যোগ করা যায়।");
+      return;
+    }
+    setUploadError(null);
+    setUploading(batch.length);
+    const uploaded: Array<{ url: string; alt: string }> = [];
+    let failed = 0;
+    for (const file of batch) {
+      try {
+        const url = await uploadImageFile(file, "products", form.name || file.name);
+        if (!form.images.some((image) => image.url === url) && !uploaded.some((image) => image.url === url)) {
+          uploaded.push({ url, alt: "" });
+        }
+      } catch (error) {
+        failed += 1;
+        setUploadError(error instanceof Error ? error.message : "আপলোড ব্যর্থ হয়েছে।");
+      } finally {
+        setUploading((count) => count - 1);
+      }
+    }
+    if (uploaded.length > 0) {
+      setForm((prev) => {
+        const seen = new Set(prev.images.map((image) => image.url));
+        const merged = [...prev.images];
+        for (const image of uploaded) {
+          if (!seen.has(image.url)) {
+            seen.add(image.url);
+            merged.push(image);
+          }
+        }
+        return { ...prev, images: merged.slice(0, 8) };
+      });
+    }
+    if (failed > 0 && uploaded.length > 0) {
+      setUploadError((previous) => previous ?? `${failed}টি ছবি আপলোড হয়নি।`);
+    }
   };
 
   const payload = () => ({
@@ -268,12 +315,44 @@ export function ProductForm({
         </div>
         <div className="panel-body stack stack-sm">
           <div className="field-row">
-            <input className="input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="/products/p-01.svg or R2 URL" />
+            <input className="input" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="/products/p-01.svg or image URL" />
             <input className="input" value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Alt text" />
             <button type="button" className="btn btn-outline btn-sm" onClick={addImage}>
-              Add
+              Add URL
             </button>
           </div>
+          <div className="upload-btn-wrap">
+            <input
+              ref={productFilesRef}
+              type="file"
+              accept={IMAGE_ACCEPT}
+              multiple
+              className="sr-only"
+              aria-hidden="true"
+              tabIndex={-1}
+              disabled={uploading > 0 || form.images.length >= 8}
+              onChange={(event) => {
+                const files = event.target.files;
+                event.target.value = "";
+                void uploadFiles(files);
+              }}
+            />
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              disabled={uploading > 0 || form.images.length >= 8}
+              onClick={() => productFilesRef.current?.click()}
+            >
+              <ImagePlus aria-hidden="true" />
+              {uploading > 0 ? `${uploading}টি আপলোড হচ্ছে…` : "ডিভাইস থেকে ছবি তুলুন"}
+            </button>
+            <span className="help-text">jpg, png, webp, avif, svg · প্রতিটি 1 KB – 5 MB · সর্বোচ্চ ৮টি</span>
+          </div>
+          {uploadError ? (
+            <p className="error-text mb-0" role="alert">
+              {uploadError}
+            </p>
+          ) : null}
           {form.images.length > 0 ? (
             <ul className="image-list">
               {form.images.map((image, index) => (

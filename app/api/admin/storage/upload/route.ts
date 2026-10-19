@@ -1,14 +1,20 @@
 import { guardMutation, jsonError, jsonOk, requestContext } from "@/lib/api/helpers";
 import { getAdminSession } from "@/lib/auth/session";
 import { requireAdminWrite } from "@/lib/admin/guard";
-import { getR2Config, MEDIA_FOLDERS, MEDIA_MAX_BYTES, MEDIA_MIN_BYTES, putObject, type MediaFolder } from "@/lib/integrations/r2";
+import { MEDIA_FOLDERS, MEDIA_MAX_BYTES, MEDIA_MIN_BYTES, type MediaFolder } from "@/lib/integrations/r2";
+import { saveUpload } from "@/lib/media/store";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
 import { media } from "@/lib/db/schema";
 import { audit } from "@/lib/auth/audit";
 
 export const dynamic = "force-dynamic";
 
-/** POST /api/admin/storage/upload — multipart (file, folder, alt) */
+/**
+ * POST /api/admin/storage/upload — multipart (file, folder, alt)
+ *
+ * R2 কনফিগার থাকলে R2-তে, না থাকলে ডেটাবেজে (media.data_base64) সেভ হয় —
+ * দুই ক্ষেত্রেই সরাসরি আপলোড চলে, R2 বাধ্যতামূলক নয়।
+ */
 export async function POST(request: Request) {
   const guard = guardMutation(request);
   if (guard) return guard;
@@ -17,12 +23,8 @@ export async function POST(request: Request) {
   const denied = await requireAdminWrite(session, reqContext.clientIpHash, "storage");
   if (denied) return denied;
 
-  const config = await getR2Config();
-  if (!config) {
-    return jsonError(
-      503,
-      "Pending — R2 storage is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET to enable uploads. Until then, use local files under /public (e.g. /products/p-01.svg).",
-    );
+  if (!isDatabaseConfigured) {
+    return jsonError(503, "ডেটাবেজ কনফিগার করা নেই — DATABASE_URL সেট করে আবার চেষ্টা করুন।");
   }
 
   let form: FormData;
@@ -47,29 +49,29 @@ export async function POST(request: Request) {
   const body = Buffer.from(await file.arrayBuffer());
   let result;
   try {
-    result = await putObject(config, folderRaw as MediaFolder, file.name, body, file.type);
+    result = await saveUpload(folderRaw as MediaFolder, file.name, body, file.type);
   } catch (error) {
     return jsonError(502, error instanceof Error ? error.message : "Upload failed");
   }
 
   let id: string | null = null;
-  if (isDatabaseConfigured) {
-    const db = requireDb("মিডিয়া");
-    const rows = await db
-      .insert(media)
-      .values({
-        objectKey: result.objectKey,
-        url: result.url,
-        mimeType: result.mimeType,
-        sizeBytes: result.sizeBytes,
-        folder: folderRaw,
-        alt,
-        uploadedBy: session?.userId ?? null,
-      })
-      .onConflictDoNothing()
-      .returning({ id: media.id });
-    id = rows[0]?.id ?? null;
-  }
+  const db = requireDb("মিডিয়া");
+  const rows = await db
+    .insert(media)
+    .values({
+      objectKey: result.objectKey,
+      url: result.url,
+      mimeType: result.mimeType,
+      sizeBytes: result.sizeBytes,
+      folder: folderRaw,
+      alt,
+      storage: result.storage,
+      dataBase64: result.dataBase64,
+      uploadedBy: session?.userId ?? null,
+    })
+    .onConflictDoNothing()
+    .returning({ id: media.id });
+  id = rows[0]?.id ?? null;
 
   await audit({
     actorType: "admin",
@@ -79,8 +81,11 @@ export async function POST(request: Request) {
     entityType: "media",
     entityId: id,
     ipHash: reqContext.clientIpHash,
-    meta: { objectKey: result.objectKey },
+    meta: { objectKey: result.objectKey, storage: result.storage },
   }).catch(() => undefined);
 
-  return jsonOk({ id, url: result.url, objectKey: result.objectKey, sizeBytes: result.sizeBytes }, 201);
+  return jsonOk(
+    { id, url: result.url, objectKey: result.objectKey, sizeBytes: result.sizeBytes, storage: result.storage },
+    201,
+  );
 }

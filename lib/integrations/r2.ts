@@ -54,7 +54,7 @@ export async function getR2Config(): Promise<R2Config | null> {
   }
 }
 
-export const MEDIA_FOLDERS = ["products", "banners", "brand", "popups"] as const;
+export const MEDIA_FOLDERS = ["products", "banners", "categories", "brand", "popups", "media"] as const;
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number];
 
 export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
@@ -67,6 +67,28 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/avif": "avif",
   "image/svg+xml": "svg",
 };
+
+/** আপলোড ভ্যালিডেশন — R2 ও ডেটাবেজ-স্টোরেজ দুটোতেই একই নিয়ম */
+export function validateMediaInput(mimeType: string, sizeBytes: number): string {
+  const extension = ALLOWED_TYPES[mimeType];
+  if (!extension) throw new Error(`Unsupported file type: ${mimeType || "(unknown)"}. Use jpg, png, webp, avif or svg.`);
+  if (sizeBytes < MEDIA_MIN_BYTES) throw new Error("File too small (minimum 1 KB)");
+  if (sizeBytes > MEDIA_MAX_BYTES) throw new Error("File too large (maximum 5 MB)");
+  return extension;
+}
+
+/** ফোল্ডার + নিরাপদ ফাইলনাম থেকে ইউনিক object key */
+export function buildObjectKey(folder: MediaFolder, filename: string, extension: string): string {
+  const safeBase =
+    filename
+      .toLowerCase()
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "file";
+  return `${folder}/${safeBase}-${Date.now().toString(36)}.${extension}`;
+}
 
 function hmac(key: Buffer | string, data: string): Buffer {
   return createHmac("sha256", key).update(data, "utf8").digest();
@@ -119,19 +141,8 @@ export async function putObject(
   body: Buffer,
   mimeType: string,
 ): Promise<PutObjectResult> {
-  const extension = ALLOWED_TYPES[mimeType];
-  if (!extension) throw new Error(`Unsupported file type: ${mimeType}`);
-  if (body.length < MEDIA_MIN_BYTES) throw new Error("File too small (minimum 1 KB)");
-  if (body.length > MEDIA_MAX_BYTES) throw new Error("File too large (maximum 5 MB)");
-
-  const safeBase = filename
-    .toLowerCase()
-    .replace(/\.[^.]+$/, "")
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40) || "file";
-  const objectKey = `${folder}/${safeBase}-${Date.now().toString(36)}.${extension}`;
+  const extension = validateMediaInput(mimeType, body.length);
+  const objectKey = buildObjectKey(folder, filename, extension);
   const path = `/${config.bucket}/${objectKey}`;
   const payloadHash = sha256Hex(body);
 

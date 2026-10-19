@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { formatDateEn } from "@/lib/utils";
+import { ImageField } from "@/components/admin/image-field";
 
 export type PopupRow = {
   id: number;
@@ -142,10 +143,15 @@ export function PopupsManager({
             <span className="label">Body</span>
             <input className="input" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} maxLength={600} />
           </label>
-          <label className="field">
-            <span className="label">Image URL</span>
-            <input className="input" value={draft.imageUrl} onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })} placeholder="/popups/…" />
-          </label>
+          <ImageField
+            label="Image"
+            value={draft.imageUrl}
+            onChange={(url) => setDraft({ ...draft, imageUrl: url })}
+            folder="popups"
+            placeholder="/popups/…"
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+            alt={draft.title}
+          />
           <label className="field">
             <span className="label">CTA label</span>
             <input className="input" value={draft.ctaLabel} onChange={(e) => setDraft({ ...draft, ctaLabel: e.target.value })} />
