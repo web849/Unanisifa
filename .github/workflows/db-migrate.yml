@@ -1,0 +1,61 @@
+name: db-migrate
+
+# main-এ push হলেই SQL মাইগ্রেশন অটো চলে (টেবিল তৈরি/আপডেট)।
+# ম্যানুয়ালি Actions ট্যাব থেকে "Run workflow" দিয়ে seed / admin bootstrap-ও চালানো যায়।
+# সিক্রেট: DATABASE_URL (আবশ্যক; Neon GitHub integration বা repo Settings → Secrets থেকে),
+# DIRECT_URL (ঐচ্ছিক), ADMIN_EMAIL/ADMIN_PASSWORD/ADMIN_NAME (শুধু bootstrap-এর জন্য)।
+
+on:
+  push:
+    branches: [main, "arena/**"]
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Run db:seed after migrate (settings, coupons, demo catalog)"
+        type: boolean
+        default: false
+      bootstrap_admin:
+        description: "Create owner admin from ADMIN_EMAIL / ADMIN_PASSWORD secrets"
+        type: boolean
+        default: false
+
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Apply SQL migrations (drizzle/)
+        run: npm run db:migrate
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
+
+      - name: Seed settings, coupons and demo catalog
+        if: ${{ github.event.inputs.seed == 'true' }}
+        run: npm run db:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
+
+      - name: Bootstrap owner admin account
+        if: ${{ github.event.inputs.bootstrap_admin == 'true' }}
+        run: npm run db:bootstrap-admin
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME }}

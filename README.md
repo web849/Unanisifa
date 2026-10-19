@@ -71,7 +71,7 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 
 1. রিপো GitHub-এ প্রাইভেট; `main` = প্রোডাকশন। ফিচার ব্রাঞ্চ → PR → merge হলে Vercel অটো-ডিপ্লয়।
 2. Vercel প্রজেক্টে env বসান (Production + Preview): অন্তত `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `IP_HASH_SECRET`, `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`।
-3. মাইগ্রেশন বিল্ডের আগে অটো চলে — `vercel.json`-এ `buildCommand: npm run db:migrate && next build`। Preview ডিপ্লয়ে Neon preview branch-এর `DATABASE_URL` দিলে মাইগ্রেশন সেখানেও প্রয়োগ হয়।
+3. মাইগ্রেশন বিল্ডের আগে অটো চলে — `vercel.json`-এ `buildCommand: npm run db:migrate && next build`। এছাড়া `main`-এ push হলে GitHub Actions (`.github/workflows/db-migrate.yml`)ও মাইগ্রেশন চালায় — দুটো পথই idempotent (`__migrations` টেবিল), তাই ডুপ্লিকেট লাগে না। Actions থেকে ম্যানুয়ালি dispatch করে seed/admin-bootstrap-ও চালানো যায়। Preview ডিপ্লয়ে Neon preview branch-এর `DATABASE_URL` দিলে মাইগ্রেশন সেখানেও প্রয়োগ হয়।
 4. দৈনিক ক্রন (`vercel.json`): `0 3 * * *` UTC = সকাল ৯টা ঢাকা — ফেইল হওয়া নোটিফিকেশন রিট্রাই + ট্র্যাকিং কিউ ফ্লাশ।
 5. কাস্টম ডোমেইন যুক্ত করার পর Admin → Settings → Branding-এ `siteUrl` আপডেট করুন।
 6. `.env` কখনো কমিট করবেন না — শুধু `.env.example` কমিট থাকে।
