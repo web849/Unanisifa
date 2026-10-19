@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { LandingBuilder } from "@/components/admin/landing-builder";
-import { getAdminSession } from "@/lib/auth/session";
+import { getAdminSession, canMutate } from "@/lib/auth/session";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
-import { coupons, landingPages, products } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { coupons, landingPages } from "@/lib/db/schema";
+import { getLandingCatalog } from "@/lib/landing/products";
 import type { LandingSection } from "@/lib/landing/sections";
+import { getBrand, getCommerce, listApprovedReviews } from "@/lib/store/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -15,20 +17,25 @@ export default async function LandingBuilderPage({ params }: { params: Promise<{
   const { id } = await params;
   if (!isDatabaseConfigured) notFound();
 
+  const pageId = Number(id);
+  if (!Number.isInteger(pageId) || pageId <= 0) notFound();
+
   const db = requireDb("ল্যান্ডিং");
-  const rows = await db.select().from(landingPages).where(eq(landingPages.id, Number(id))).limit(1);
+  const rows = await db.select().from(landingPages).where(eq(landingPages.id, pageId)).limit(1);
   const page = rows[0];
   if (!page) notFound();
 
-  const [productList, couponList] = await Promise.all([
-    db
-      .select({ id: products.id, name: products.name, price: products.price })
-      .from(products)
-      .where(eq(products.status, "active"))
-      .orderBy(products.id)
-      .limit(100),
+  const [catalog, couponList, brand, commerce] = await Promise.all([
+    getLandingCatalog({ includeDrafts: true, demoFallback: true }),
     db.select({ code: coupons.code }).from(coupons).where(eq(coupons.active, true)).limit(50),
+    getBrand(),
+    getCommerce(),
   ]);
+
+  const mainProduct = page.productId
+    ? (catalog.items.find((product) => product.id === page.productId) ?? null)
+    : null;
+  const reviews = mainProduct && !mainProduct.isDemo ? await listApprovedReviews(mainProduct.id) : [];
 
   return (
     <AdminShell
@@ -45,15 +52,21 @@ export default async function LandingBuilderPage({ params }: { params: Promise<{
           productId: page.productId,
           status: page.status,
           themeSlug: page.themeSlug,
-          sections: page.sections as LandingSection[],
+          sections: (page.sections as LandingSection[]) ?? [],
           metaTitle: page.metaTitle,
           metaDescription: page.metaDescription,
           couponCode: page.couponCode,
-          checkoutOffers: page.checkoutOffers as number[],
-          thankYouOffers: page.thankYouOffers as number[],
+          checkoutOffers: (page.checkoutOffers as number[]) ?? [],
+          thankYouOffers: (page.thankYouOffers as number[]) ?? [],
+          updatedAt: page.updatedAt.toISOString(),
         }}
-        products={productList}
+        products={catalog.items}
+        demoFallback={catalog.demoFallback}
         coupons={couponList}
+        brand={brand}
+        commerce={commerce}
+        reviews={reviews}
+        canWrite={canMutate(session)}
       />
     </AdminShell>
   );

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Plus, Rocket } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DemoCatalogNotice } from "@/components/admin/demo-catalog-notice";
 import { getAdminSession } from "@/lib/auth/session";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
 import { landingPages, products } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { formatDateEn } from "@/lib/utils";
+import { getLandingCatalog } from "@/lib/landing/products";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,11 @@ export default async function AdminLandingPagesPage() {
     updatedAt: Date;
   }> = [];
 
+  let catalogEmpty = false;
+
   if (isDatabaseConfigured) {
+    const catalog = await getLandingCatalog();
+    catalogEmpty = catalog.databaseCount === 0;
     const db = requireDb("ল্যান্ডিং");
     rows = await db
       .select({
@@ -49,6 +55,8 @@ export default async function AdminLandingPagesPage() {
 
   return (
     <AdminShell session={session} counts={{}} title="Landing Pages" subtitle="Facebook campaign funnels at /offer/{slug}">
+      {catalogEmpty ? <DemoCatalogNotice demoCount={15} compact /> : null}
+
       <div className="panel mb-4">
         <div className="panel-head">
           <h2 className="panel-title">Pages ({rows.length})</h2>
@@ -59,7 +67,8 @@ export default async function AdminLandingPagesPage() {
         </div>
         <div className="panel-body">
           <p className="text-small text-muted mb-0">
-            A new page starts with a 7-section template — publish it, then copy the /offer/… URL into your ad.
+            A new page starts with a 10-block medicine template. Open the builder for a live desktop and
+            mobile preview, then copy the /offer/… URL into your ad.
           </p>
         </div>
       </div>
@@ -102,10 +111,15 @@ export default async function AdminLandingPagesPage() {
                   </td>
                   <td className="text-small text-muted">{formatDateEn(row.updatedAt)}</td>
                   <td className="table-actions">
-                    <Link className="btn btn-outline btn-sm" href={`/admin/landing-pages/${row.id}`}>
-                      <Rocket aria-hidden="true" />
-                      Builder
-                    </Link>
+                    <div className="field-row">
+                      <Link className="btn btn-ghost btn-sm" href={`/admin/landing-pages/${row.id}/preview`} target="_blank">
+                        Preview
+                      </Link>
+                      <Link className="btn btn-outline btn-sm" href={`/admin/landing-pages/${row.id}`}>
+                        <Rocket aria-hidden="true" />
+                        Builder
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

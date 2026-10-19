@@ -7,17 +7,9 @@ import { isValidAddress, isValidBdPhone } from "@/lib/orders/validation-client";
 import { formatTaka, toBanglaDigits } from "@/lib/utils";
 import { whatsappLink, phoneDisplay } from "@/lib/contact-links";
 import type { BrandSettings } from "@/lib/config";
+import type { LandingOrderProduct } from "@/lib/landing/product-types";
 
-export type LandingOrderProduct = {
-  id: number;
-  name: string;
-  price: number;
-  compareAtPrice: number | null;
-  unitSize: string | null;
-  image: string | null;
-  inStock: boolean;
-  requiresPrescription: boolean;
-};
+export type { LandingOrderProduct } from "@/lib/landing/product-types";
 
 /**
  * ল্যান্ডিং পেজের ইনলাইন অর্ডার ফর্ম — শুধু productId + quantity পাঠায়;
@@ -31,6 +23,9 @@ export function LandingOrderForm({
   deliveryOutside,
   brand,
   maxQuantity,
+  title,
+  subtitle,
+  preview = false,
 }: {
   product: LandingOrderProduct;
   landingSlug: string;
@@ -39,6 +34,10 @@ export function LandingOrderForm({
   deliveryOutside: number;
   brand: BrandSettings;
   maxQuantity: number;
+  title?: string;
+  subtitle?: string;
+  /** বিল্ডার/ড্রাফট প্রিভিউ — অর্ডার কখনো সাবমিট হবে না */
+  preview?: boolean;
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -68,6 +67,10 @@ export function LandingOrderForm({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (preview) {
+      setServerError("প্রিভিউ মোড — অর্ডার পাঠানো হবে না।");
+      return;
+    }
     const next: Record<string, string> = {};
     if (name.trim().length < 3) next.name = "পূর্ণ নাম লিখুন";
     if (!isValidBdPhone(phone)) next.phone = "সঠিক মোবাইল নম্বর দিন (যেমন 01712345678)";
@@ -147,9 +150,11 @@ export function LandingOrderForm({
     <section className="lp-section lp-section-alt" id="order_form" aria-labelledby="lp-order-title">
       <div className="lp-inner">
         <h2 className="lp-heading" id="lp-order-title">
-          অর্ডার করুন
+          {title?.trim() || "অর্ডার করুন"}
         </h2>
-        <p className="lp-text">পণ্য হাতে পেয়ে টাকা পরিশোধ করুন (ক্যাশ অন ডেলিভারি)।</p>
+        <p className="lp-text">
+          {subtitle?.trim() || "পণ্য হাতে পেয়ে টাকা পরিশোধ করুন (ক্যাশ অন ডেলিভারি)।"}
+        </p>
 
         <form ref={formRef} className="card order-form-card" onSubmit={submit} noValidate>
           <div className="order-form-product">
@@ -295,9 +300,9 @@ export function LandingOrderForm({
 
           {serverError ? <p className="error-text" role="alert">{serverError}</p> : null}
 
-          <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy}>
+          <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={busy || preview}>
             <ShoppingCart aria-hidden="true" />
-            {busy ? "পাঠানো হচ্ছে…" : "অর্ডার নিশ্চিত করুন"}
+            {preview ? "প্রিভিউ মোড" : busy ? "পাঠানো হচ্ছে…" : "অর্ডার নিশ্চিত করুন"}
           </button>
           <p className="text-small text-muted" style={{ textAlign: "center" }}>
             অর্ডারের পর আমরা কল করে নিশ্চিত করব। ডেলিভারি ম্যানের সামনে পণ্য দেখে টাকা পরিশোধ করুন।
