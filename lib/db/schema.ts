@@ -710,6 +710,14 @@ export const media = pgTable(
     height: integer("height"),
     folder: text("folder").notNull().default("products"),
     alt: text("alt"),
+    /**
+     * স্টোরেজ ব্যাকএন্ড — "r2" (Cloudflare R2) অথবা "db" (ডেটাবেজে base64)।
+     * R2 কনফিগার না থাকলে আপলোড ডেটাবেজে সেভ হয়, /api/media/... থেকে সার্ভ হয় —
+     * ফলে R2 ছাড়াই অ্যাডমিন প্যানেলে সরাসরি ছবি আপলোড চলে।
+     */
+    storage: text("storage").notNull().default("r2"),
+    /** storage="db" হলে ফাইলের base64 বাইট; R2-তে থাকলে null */
+    dataBase64: text("data_base64"),
     uploadedBy: uuid("uploaded_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

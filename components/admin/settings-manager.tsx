@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
 import type { BrandSettings, CommerceSettings } from "@/lib/config";
+import { ImageField } from "@/components/admin/image-field";
 
 export function SettingsManager({
   brand,
@@ -145,14 +146,22 @@ export function SettingsManager({
             <span className="label">Site URL</span>
             <input className="input mono" value={brandDraft.siteUrl} onChange={(e) => b("siteUrl", e.target.value)} />
           </label>
-          <label className="field">
-            <span className="label">Logo URL (empty = built-in)</span>
-            <input className="input mono" value={brandDraft.logoUrl} onChange={(e) => b("logoUrl", e.target.value)} />
-          </label>
-          <label className="field">
-            <span className="label">Logo light URL (empty = built-in)</span>
-            <input className="input mono" value={brandDraft.logoLightUrl} onChange={(e) => b("logoLightUrl", e.target.value)} />
-          </label>
+          <ImageField
+            label="Logo (empty = built-in)"
+            value={brandDraft.logoUrl}
+            onChange={(url) => b("logoUrl", url)}
+            folder="brand"
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+            alt="logo"
+          />
+          <ImageField
+            label="Logo light (empty = built-in)"
+            value={brandDraft.logoLightUrl}
+            onChange={(url) => b("logoLightUrl", url)}
+            folder="brand"
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+            alt="logo light"
+          />
           <label className="field">
             <span className="label">Drug license number (empty shows “Pending”)</span>
             <input className="input mono" value={brandDraft.drugLicense} onChange={(e) => b("drugLicense", e.target.value)} />

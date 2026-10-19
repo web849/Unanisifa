@@ -10,6 +10,7 @@ import {
 } from "@/lib/landing/sections";
 import { sanitizeLandingHtml } from "@/lib/landing/html";
 import { formatTakaEn } from "@/lib/utils";
+import { UploadButton } from "@/components/admin/image-field";
 
 type Settings = Record<string, unknown>;
 
@@ -104,6 +105,37 @@ function StringField({
       )}
       {hint ? <span className="help-text">{hint}</span> : null}
     </label>
+  );
+}
+
+/** ছবির URL ফিল্ড + সরাসরি আপলোড বোতাম (ল্যান্ডিং বিল্ডারের জন্য) */
+function ImageUrlField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  hint?: string;
+}) {
+  return (
+    <div className="field">
+      <span className="label">{label}</span>
+      <div className="image-field-row">
+        <input
+          className="input mono"
+          value={value}
+          placeholder={placeholder ?? "https://… or /images/…"}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <UploadButton folder="media" onUploaded={onChange} alt={label} />
+      </div>
+      {hint ? <span className="help-text">{hint}</span> : null}
+    </div>
   );
 }
 
@@ -311,15 +343,26 @@ function ImagesEditor({
               )}
             </div>
             <div className="lp-image-fields">
-              <input
-                className="input mono"
-                placeholder="https://… or /images/…"
-                value={image.url}
-                disabled={readOnly}
-                onChange={(event) =>
-                  onChange(images.map((item, itemIndex) => (itemIndex === index ? { ...item, url: event.target.value } : item)))
-                }
-              />
+              <div className="image-field-row">
+                <input
+                  className="input mono"
+                  placeholder="https://… or /images/…"
+                  value={image.url}
+                  disabled={readOnly}
+                  onChange={(event) =>
+                    onChange(images.map((item, itemIndex) => (itemIndex === index ? { ...item, url: event.target.value } : item)))
+                  }
+                />
+                <UploadButton
+                  folder="media"
+                  label="ছবি"
+                  alt={image.alt || "landing image"}
+                  disabled={readOnly}
+                  onUploaded={(url) =>
+                    onChange(images.map((item, itemIndex) => (itemIndex === index ? { ...item, url } : item)))
+                  }
+                />
+              </div>
               <input
                 className="input"
                 placeholder="Alt text"
@@ -512,7 +555,12 @@ export function LandingSectionEditor({
             onChange={(value) => set("ctaTarget", value)}
             hint="order_form, /products, or a full URL"
           />
-          <StringField label="Image URL" value={str("imageUrl")} onChange={(value) => set("imageUrl", value)} />
+          <ImageUrlField
+            label="Image"
+            value={str("imageUrl")}
+            onChange={(value) => set("imageUrl", value)}
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+          />
         </>
       ) : null}
 
@@ -527,7 +575,12 @@ export function LandingSectionEditor({
         <>
           <StringField label="Title" value={str("title")} onChange={(value) => set("title", value)} />
           <StringField label="Body" value={str("body")} multiline rows={5} onChange={(value) => set("body", value)} />
-          <StringField label="Image URL" value={str("imageUrl")} onChange={(value) => set("imageUrl", value)} />
+          <ImageUrlField
+            label="Image"
+            value={str("imageUrl")}
+            onChange={(value) => set("imageUrl", value)}
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+          />
         </>
       ) : null}
 
@@ -716,7 +769,12 @@ export function LandingSectionEditor({
         <>
           <StringField label="Popup title" value={str("title")} onChange={(value) => set("title", value)} />
           <StringField label="Body" value={str("body")} multiline onChange={(value) => set("body", value)} />
-          <StringField label="Image URL" value={str("imageUrl")} onChange={(value) => set("imageUrl", value)} />
+          <ImageUrlField
+            label="Image"
+            value={str("imageUrl")}
+            onChange={(value) => set("imageUrl", value)}
+            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
+          />
           <StringField label="CTA label" value={str("ctaLabel")} onChange={(value) => set("ctaLabel", value)} />
           <StringField label="CTA URL" value={str("ctaUrl")} onChange={(value) => set("ctaUrl", value)} />
           <label className="field field-check">

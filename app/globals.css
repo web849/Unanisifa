@@ -6034,3 +6034,67 @@ span.table-thumb-empty {
     animation: none;
   }
 }
+
+/* ---- অ্যাডমিন: সরাসরি ছবি আপলোড (ImageField / UploadButton) ---- */
+.image-field-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.image-field-row .input {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.image-field-upload {
+  flex: none;
+  white-space: nowrap;
+}
+
+.image-field-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.image-field-preview img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--sage-soft);
+}
+
+.upload-btn-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+.upload-btn-error {
+  flex-basis: 100%;
+}
+
+.image-field .error-text {
+  margin-top: 6px;
+}
+
+@media (max-width: 560px) {
+  .image-field-row {
+    flex-direction: column;
+  }
+
+  .image-field-upload {
+    align-self: flex-start;
+  }
+}

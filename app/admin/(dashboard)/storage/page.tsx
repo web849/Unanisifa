@@ -1,6 +1,7 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StorageUploader } from "@/components/admin/storage-uploader";
 import { R2SetupForm } from "@/components/admin/r2-setup-form";
+import { R2TestButton } from "@/components/admin/r2-test-button";
 import { getAdminSession } from "@/lib/auth/session";
 import { getR2Config, MEDIA_FOLDERS } from "@/lib/integrations/r2";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
@@ -16,7 +17,17 @@ export default async function AdminStoragePage() {
 
   const r2 = await getR2Config();
 
-  let rows: Array<{ id: string; url: string; objectKey: string; mimeType: string; sizeBytes: number; folder: string; alt: string | null; createdAt: Date }> = [];
+  let rows: Array<{
+    id: string;
+    url: string;
+    objectKey: string;
+    mimeType: string;
+    sizeBytes: number;
+    folder: string;
+    alt: string | null;
+    storage: string;
+    createdAt: Date;
+  }> = [];
   if (isDatabaseConfigured) {
     const db = requireDb("মিডিয়া");
     rows = await db
@@ -28,6 +39,7 @@ export default async function AdminStoragePage() {
         sizeBytes: media.sizeBytes,
         folder: media.folder,
         alt: media.alt,
+        storage: media.storage,
         createdAt: media.createdAt,
       })
       .from(media)
@@ -36,12 +48,35 @@ export default async function AdminStoragePage() {
   }
 
   return (
-    <AdminShell session={session} counts={{}} title="Storage (R2)" subtitle={`Uploads 1 KB – 5 MB · folders: ${MEDIA_FOLDERS.join(", ")}`}>
+    <AdminShell
+      session={session}
+      counts={{}}
+      title="Storage"
+      subtitle={`Uploads 1 KB – 5 MB · folders: ${MEDIA_FOLDERS.join(", ")}`}
+    >
       {r2 ? (
-        <StorageUploader folders={[...MEDIA_FOLDERS]} />
+        <div className="pending-note mb-4">
+          <span>R2 connected — new uploads go to Cloudflare R2.</span> <R2TestButton />
+        </div>
       ) : (
-        <R2SetupForm />
+        <div className="pending-note mb-4">
+          R2 not configured — uploads are stored securely in the database and served from this site. Product, banner,
+          category, popup and logo uploads all work. Connect R2 below only if you outgrow database storage.
+        </div>
       )}
+
+      <StorageUploader folders={[...MEDIA_FOLDERS]} />
+
+      {!r2 ? (
+        <details className="panel mb-4">
+          <summary className="panel-head" style={{ cursor: "pointer" }}>
+            <span className="panel-title">Optional: connect Cloudflare R2</span>
+          </summary>
+          <div className="panel-body">
+            <R2SetupForm />
+          </div>
+        </details>
+      ) : null}
 
       <div className="panel">
         <div className="panel-head">
@@ -54,6 +89,7 @@ export default async function AdminStoragePage() {
                 <th style={{ width: 72 }}>Preview</th>
                 <th>Object key</th>
                 <th>Folder</th>
+                <th>Backend</th>
                 <th style={{ textAlign: "right" }}>Size</th>
                 <th>URL</th>
                 <th>Uploaded</th>
@@ -72,6 +108,7 @@ export default async function AdminStoragePage() {
                   </td>
                   <td className="mono text-small">{row.objectKey}</td>
                   <td className="text-small">{row.folder}</td>
+                  <td className="text-small">{row.storage === "db" ? "Database" : "R2"}</td>
                   <td className="table-num text-small">{Math.round(row.sizeBytes / 1024)} KB</td>
                   <td className="text-small">
                     <a href={row.url} target="_blank" rel="noreferrer" className="mono">
@@ -83,7 +120,7 @@ export default async function AdminStoragePage() {
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-muted">
+                  <td colSpan={7} className="text-muted">
                     No uploads yet.
                   </td>
                 </tr>

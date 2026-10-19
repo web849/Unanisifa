@@ -1,9 +1,9 @@
 /**
  * Cloudflare R2 (S3-compatible) ক্লায়েট — dependency-free AWS SigV4 (node:crypto)।
- * R2_* env না থাকলে আপলোড নিষ্ক্রিয়; UI সত্যিকারের "Pending" অবস্থা দেখায়।
+ * R2 কনফিগার থাকলে আপলোড R2-তে যায়; না থাকলে lib/media/store ডেটাবেজ-ফলব্যাক দেয়।
  */
 
-import { createHmac, createHash } from "node:crypto";
+import { createHmac, createHash, randomBytes } from "node:crypto";
 import { resolveSecret } from "./secrets";
 import { isDatabaseConfigured } from "../db";
 
@@ -54,7 +54,7 @@ export async function getR2Config(): Promise<R2Config | null> {
   }
 }
 
-export const MEDIA_FOLDERS = ["products", "banners", "brand", "popups"] as const;
+export const MEDIA_FOLDERS = ["products", "banners", "categories", "brand", "popups", "media"] as const;
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number];
 
 export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
@@ -67,6 +67,28 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/avif": "avif",
   "image/svg+xml": "svg",
 };
+
+/** আপলোড ভ্যালিডেশন — R2 ও ডেটাবেজ-স্টোরেজ দুটোতেই একই নিয়ম */
+export function validateMediaInput(mimeType: string, sizeBytes: number): string {
+  const extension = ALLOWED_TYPES[mimeType];
+  if (!extension) throw new Error(`Unsupported file type: ${mimeType || "(unknown)"}. Use jpg, png, webp, avif or svg.`);
+  if (sizeBytes < MEDIA_MIN_BYTES) throw new Error("File too small (minimum 1 KB)");
+  if (sizeBytes > MEDIA_MAX_BYTES) throw new Error("File too large (maximum 5 MB)");
+  return extension;
+}
+
+/** ফোল্ডার + নিরাপদ ফাইলনাম থেকে ইউনিক object key */
+export function buildObjectKey(folder: MediaFolder, filename: string, extension: string): string {
+  const safeBase =
+    filename
+      .toLowerCase()
+      .replace(/\.[^.]+$/, "")
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "file";
+  return `${folder}/${safeBase}-${Date.now().toString(36)}.${extension}`;
+}
 
 function hmac(key: Buffer | string, data: string): Buffer {
   return createHmac("sha256", key).update(data, "utf8").digest();
@@ -119,19 +141,8 @@ export async function putObject(
   body: Buffer,
   mimeType: string,
 ): Promise<PutObjectResult> {
-  const extension = ALLOWED_TYPES[mimeType];
-  if (!extension) throw new Error(`Unsupported file type: ${mimeType}`);
-  if (body.length < MEDIA_MIN_BYTES) throw new Error("File too small (minimum 1 KB)");
-  if (body.length > MEDIA_MAX_BYTES) throw new Error("File too large (maximum 5 MB)");
-
-  const safeBase = filename
-    .toLowerCase()
-    .replace(/\.[^.]+$/, "")
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40) || "file";
-  const objectKey = `${folder}/${safeBase}-${Date.now().toString(36)}.${extension}`;
+  const extension = validateMediaInput(mimeType, body.length);
+  const objectKey = buildObjectKey(folder, filename, extension);
   const path = `/${config.bucket}/${objectKey}`;
   const payloadHash = sha256Hex(body);
 
@@ -148,4 +159,44 @@ export async function putObject(
     : `/api/media/${objectKey}`;
 
   return { url, objectKey, sizeBytes: body.length, mimeType };
+}
+
+/**
+ * R2 কানেকশন টেস্ট — ছোট একটি temp অবজেক্ট PUT করে আবার DELETE করে।
+ * সফল হলে (অর্থাৎ এই ক্রেডেনশিয়ালে আপলোড চলবে) object key ফেরত দেয়;
+ * ব্যর্থ হলে R2-এর আসল এররসহ থ্রো করে (ভুল key, ভুল bucket, 403 permission…)।
+ */
+export async function testR2Connection(config: R2Config): Promise<{ objectKey: string }> {
+  const nonce = randomBytes(6).toString("hex");
+  const objectKey = `media/__r2-test-${Date.now().toString(36)}-${nonce}.png`;
+  const path = `/${config.bucket}/${objectKey}`;
+
+  const body = Buffer.alloc(1024);
+  const put = signRequest(config, "PUT", path, { "content-type": "image/png" }, sha256Hex(body));
+  let putResponse: Response;
+  try {
+    putResponse = await fetch(put.url, { method: "PUT", headers: put.headers, body: new Uint8Array(body) });
+  } catch (error) {
+    throw new Error(`R2-তে পৌঁছানো যাচ্ছে না: ${error instanceof Error ? error.message : "network error"}`);
+  }
+  if (!putResponse.ok) {
+    const text = await putResponse.text().catch(() => "");
+    throw new Error(`R2 test upload failed (${putResponse.status}): ${text.slice(0, 300)}`);
+  }
+
+  const deleteSigned = signRequest(config, "DELETE", path, {}, sha256Hex(""));
+  let deleteResponse: Response | null = null;
+  try {
+    deleteResponse = await fetch(deleteSigned.url, { method: "DELETE", headers: deleteSigned.headers });
+  } catch {
+    deleteResponse = null;
+  }
+  if (!deleteResponse || !deleteResponse.ok) {
+    const status = deleteResponse ? deleteResponse.status : "network error";
+    throw new Error(
+      `R2 upload OK, but cleanup DELETE failed (${status}). Remove "${objectKey}" from the "${config.bucket}" bucket manually.`,
+    );
+  }
+
+  return { objectKey };
 }
