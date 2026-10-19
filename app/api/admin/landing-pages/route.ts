@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 const sectionSchema = z.object({
   id: z.number().int().positive(),
   type: z.enum([
-    "hero", "text", "split", "images", "video", "products", "order_form", "cta",
+    "hero", "text", "split", "images", "video", "html", "products", "order_form", "cta",
     "features", "steps", "faq", "testimonials", "reviews", "countdown", "popup",
     "announcement", "guarantee", "contact", "divider", "spacer",
     "ingredients", "dosage", "doctor_advice",
@@ -71,6 +71,7 @@ export async function POST(request: Request) {
 
   const db = requireDb("ল্যান্ডিং");
   const slug = slugify(data.slug || data.title);
+  if (!slug) return jsonError(400, "Could not generate a slug — use letters or Bangla text");
   const existing = await db.select({ id: landingPages.id }).from(landingPages).where(eq(landingPages.slug, slug)).limit(1);
   if (existing.length > 0) return jsonError(409, `Slug already used: ${slug}`);
 

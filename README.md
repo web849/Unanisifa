@@ -37,6 +37,7 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 ```
 
 - অ্যাডমিন লগিন: `/admin` → bootstrap করা ইমেইল/পাসওয়ার্ড। পাসওয়ার্ড ভুলে গেলে `ADMIN_EMAIL` ও নতুন `ADMIN_PASSWORD` Actions secrets-এ দিয়ে `db-migrate` workflow-তে **Reset existing admin password** চালান; এতে ওই অ্যাকাউন্টের সেশনগুলো বাতিল হবে।
+- ডেটাবেজ কনফিগার করা কিন্তু ক্যাটালগ খালি হলে Admin → Products / Landing Pages-এ **Import demo products** বোতাম দিয়ে এক ক্লিকে ১৫টি ডেমো পণ্য (+ক্যাটাগরি, ছবি, ব্যানার, CMS পেজ) বসানো যায় — একই কাজ `npm run db:seed-catalog`, API `POST /api/admin/demo-catalog`।
 - ডেমো ডেটা মুছতে: `npm run cleanup:demo` (আগে dry-run দেখায়; `--yes` দিলে মুছে ফেলে। আসল অর্ডার/কাস্টমার অছোঁয়া থাকে)।
 
 ### প্রয়োজনীয় env (বিস্তারিত `.env.example`-এ)

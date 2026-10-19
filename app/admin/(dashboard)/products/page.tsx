@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { DemoCatalogNotice } from "@/components/admin/demo-catalog-notice";
 import { getAdminSession } from "@/lib/auth/session";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
 import { categories, productImages, products } from "@/lib/db/schema";
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { formatTakaEn } from "@/lib/utils";
+import { getLandingCatalog } from "@/lib/landing/products";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +32,13 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
     category: string | null;
   }> = [];
   let cats: Array<{ id: number; name: string }> = [];
+  let catalogEmpty = false;
+  let demoCount = 0;
 
   if (isDatabaseConfigured) {
+    const catalog = await getLandingCatalog({ demoFallback: true });
+    catalogEmpty = catalog.databaseCount === 0;
+    demoCount = catalog.items.length;
     const db = requireDb("প্রোডাক্ট তালিকা");
     const conditions = [];
     if (params.search?.trim()) conditions.push(ilike(products.name, `%${params.search.trim()}%`));
@@ -66,6 +73,8 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
 
   return (
     <AdminShell session={session} counts={{}} title="Products" subtitle={`${rows.length} product(s)`}>
+      {catalogEmpty ? <DemoCatalogNotice demoCount={demoCount} /> : null}
+
       <div className="panel mb-4">
         <div className="panel-head">
           <h2 className="panel-title">Catalog</h2>
