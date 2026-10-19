@@ -23,9 +23,19 @@ export async function GET(request: Request) {
 
   const db = requireDb("পপআপ");
 
-  // মিস্ট্রি অফার চালু কি না (site_settings → popup.mysteryEnabled)
+  // মাস্টার সুইচ (site_settings → popup.popupsEnabled):
+  // ডিফল্ট বন্ধ — অ্যাডমিন Settings থেকে স্পষ্টভাবে চালু না করলে
+  // কাস্টমার সাইটে ঢুকলেই কোনো পপআপ (মিস্ট্রি/ক্যাম্পেইন/পেজ) আসবে না।
   const settingRows = await db.select().from(siteSettings).where(eq(siteSettings.key, "popup")).limit(1);
-  const popupSettings = (settingRows[0]?.value ?? {}) as { mysteryEnabled?: boolean };
+  const popupSettings = (settingRows[0]?.value ?? {}) as {
+    popupsEnabled?: boolean;
+    mysteryEnabled?: boolean;
+  };
+  if (popupSettings.popupsEnabled !== true) {
+    return jsonOk({ kind: "none" });
+  }
+
+  // মিস্ট্রি অফার চালু কি না (site_settings → popup.mysteryEnabled)
   const mysteryEnabled = popupSettings.mysteryEnabled !== false;
 
   const isLanding = path.startsWith("/offer/");

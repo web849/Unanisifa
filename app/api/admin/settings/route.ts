@@ -48,6 +48,7 @@ const commerceSchema = z.object({
 });
 
 const popupSchema = z.object({
+  popupsEnabled: z.boolean(),
   mysteryEnabled: z.boolean(),
 });
 
