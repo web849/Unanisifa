@@ -30,5 +30,20 @@ export async function resolve(specifier, context, nextResolve) {
       }
     }
   }
-  return nextResolve(specifier, context);
+  return resolveBare(specifier, context, nextResolve);
+}
+
+/**
+ * প্যাকেজ স্পেসিফায়ার (যেমন 'next/server') — Node নিজেই এক্সপোর্ট ম্যাপ
+ * দিয়ে রিজলভ করুক। কোনো প্যাকেজে ".js" এক্সটেনশন ছাড়া এন্ট্রি না থাকলে
+ * (ERR_MODULE_NOT_FOUND) ".js" যোগ করে আবার চেষ্টা করা হয়।
+ */
+async function resolveBare(specifier, context, nextResolve) {
+  try {
+    return await nextResolve(specifier, context);
+  } catch (error) {
+    if (error?.code !== "ERR_MODULE_NOT_FOUND") throw error;
+    if (specifier.endsWith(".js")) throw error;
+    return nextResolve(`${specifier}.js`, context);
+  }
 }
