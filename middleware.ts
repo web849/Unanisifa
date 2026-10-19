@@ -19,6 +19,8 @@ export async function middleware(request: NextRequest) {
 
     const token = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
     const isLogin = pathname === "/admin/login";
+    // Login must reach its handler before a session exists; the handler validates credentials.
+    const isLoginApi = pathname === "/api/admin/auth/login";
     let valid = false;
 
     if (token) {
@@ -43,7 +45,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    if (!isLogin && !valid) {
+    if (!isLogin && !isLoginApi && !valid) {
       if (isAdminApi) {
         return NextResponse.json({ ok: false, error: "লগইন প্রয়োজন" }, { status: 401 });
       }

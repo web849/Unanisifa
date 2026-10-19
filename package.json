@@ -23,7 +23,8 @@
     "cleanup:demo": "node scripts/cleanup-demo.mjs",
     "db:studio": "drizzle-kit studio",
     "predeploy": "npm run db:migrate",
-    "assets:demo": "node scripts/generate-demo-assets.mjs"
+    "assets:demo": "node scripts/generate-demo-assets.mjs",
+    "db:reset-admin-password": "node scripts/reset-admin-password.mjs"
   },
   "dependencies": {
     "@fontsource/hind-siliguri": "^5.3.0",

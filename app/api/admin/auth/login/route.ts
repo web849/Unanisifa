@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { guardMutation, jsonError, jsonOk, readJson, requestContext } from "@/lib/api/helpers";
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   const rows = await db
     .select()
     .from(adminUsers)
-    .where(eq(adminUsers.email, parsed.data.email.toLowerCase()))
+    .where(sql`lower(${adminUsers.email}) = ${parsed.data.email.toLowerCase()}`)
     .limit(1);
   const user = rows[0];
 
