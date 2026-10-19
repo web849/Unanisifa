@@ -1,6 +1,7 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StorageUploader } from "@/components/admin/storage-uploader";
 import { R2SetupForm } from "@/components/admin/r2-setup-form";
+import { R2TestButton } from "@/components/admin/r2-test-button";
 import { getAdminSession } from "@/lib/auth/session";
 import { getR2Config, MEDIA_FOLDERS } from "@/lib/integrations/r2";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
@@ -54,7 +55,9 @@ export default async function AdminStoragePage() {
       subtitle={`Uploads 1 KB – 5 MB · folders: ${MEDIA_FOLDERS.join(", ")}`}
     >
       {r2 ? (
-        <div className="pending-note mb-4">R2 connected — new uploads go to Cloudflare R2.</div>
+        <div className="pending-note mb-4">
+          <span>R2 connected — new uploads go to Cloudflare R2.</span> <R2TestButton />
+        </div>
       ) : (
         <div className="pending-note mb-4">
           R2 not configured — uploads are stored securely in the database and served from this site. Product, banner,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, Save, Trash2 } from "lucide-react";
 import { formatDateEn } from "@/lib/utils";
+import { R2TestButton } from "@/components/admin/r2-test-button";
 
 const KEY_LABELS: Record<string, string> = {
   telegram_bot_token: "Telegram bot token",
@@ -148,6 +149,21 @@ export function IntegrationsManager({
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head">
+          <h2 className="panel-title">R2 connection</h2>
+        </div>
+        <div className="panel-body stack stack-sm">
+          <p className="text-small text-muted mb-0">
+            Writes a tiny temp object to your R2 bucket and deletes it. Success means every image upload (products,
+            banners, categories, popups, logos) goes to R2. Needs an API token with Object Read &amp; Write permission.
+          </p>
+          <div>
+            <R2TestButton />
+          </div>
         </div>
       </div>
 

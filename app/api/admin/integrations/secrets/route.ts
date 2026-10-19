@@ -56,7 +56,7 @@ export async function PUT(request: Request) {
   try {
     await setSecret(parsed.data.key, parsed.data.value);
   } catch {
-    return jsonError(500, "SECRETS_ENCRYPTION_KEY missing or invalid — cannot store secrets");
+    return jsonError(500, "AUTH_SECRET missing or invalid — cannot encrypt secrets");
   }
 
   await audit({

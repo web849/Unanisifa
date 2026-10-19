@@ -1,9 +1,9 @@
 /**
  * Cloudflare R2 (S3-compatible) ক্লায়েট — dependency-free AWS SigV4 (node:crypto)।
- * R2_* env না থাকলে আপলোড নিষ্ক্রিয়; UI সত্যিকারের "Pending" অবস্থা দেখায়।
+ * R2 কনফিগার থাকলে আপলোড R2-তে যায়; না থাকলে lib/media/store ডেটাবেজ-ফলব্যাক দেয়।
  */
 
-import { createHmac, createHash } from "node:crypto";
+import { createHmac, createHash, randomBytes } from "node:crypto";
 import { resolveSecret } from "./secrets";
 import { isDatabaseConfigured } from "../db";
 
@@ -159,4 +159,44 @@ export async function putObject(
     : `/api/media/${objectKey}`;
 
   return { url, objectKey, sizeBytes: body.length, mimeType };
+}
+
+/**
+ * R2 কানেকশন টেস্ট — ছোট একটি temp অবজেক্ট PUT করে আবার DELETE করে।
+ * সফল হলে (অর্থাৎ এই ক্রেডেনশিয়ালে আপলোড চলবে) object key ফেরত দেয়;
+ * ব্যর্থ হলে R2-এর আসল এররসহ থ্রো করে (ভুল key, ভুল bucket, 403 permission…)।
+ */
+export async function testR2Connection(config: R2Config): Promise<{ objectKey: string }> {
+  const nonce = randomBytes(6).toString("hex");
+  const objectKey = `media/__r2-test-${Date.now().toString(36)}-${nonce}.png`;
+  const path = `/${config.bucket}/${objectKey}`;
+
+  const body = Buffer.alloc(1024);
+  const put = signRequest(config, "PUT", path, { "content-type": "image/png" }, sha256Hex(body));
+  let putResponse: Response;
+  try {
+    putResponse = await fetch(put.url, { method: "PUT", headers: put.headers, body: new Uint8Array(body) });
+  } catch (error) {
+    throw new Error(`R2-তে পৌঁছানো যাচ্ছে না: ${error instanceof Error ? error.message : "network error"}`);
+  }
+  if (!putResponse.ok) {
+    const text = await putResponse.text().catch(() => "");
+    throw new Error(`R2 test upload failed (${putResponse.status}): ${text.slice(0, 300)}`);
+  }
+
+  const deleteSigned = signRequest(config, "DELETE", path, {}, sha256Hex(""));
+  let deleteResponse: Response | null = null;
+  try {
+    deleteResponse = await fetch(deleteSigned.url, { method: "DELETE", headers: deleteSigned.headers });
+  } catch {
+    deleteResponse = null;
+  }
+  if (!deleteResponse || !deleteResponse.ok) {
+    const status = deleteResponse ? deleteResponse.status : "network error";
+    throw new Error(
+      `R2 upload OK, but cleanup DELETE failed (${status}). Remove "${objectKey}" from the "${config.bucket}" bucket manually.`,
+    );
+  }
+
+  return { objectKey };
 }
