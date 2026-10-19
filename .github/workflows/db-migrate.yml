@@ -1,0 +1,130 @@
+name: db-migrate
+
+# main-এ push হলেই SQL মাইগ্রেশন অটো চলে (টেবিল তৈরি/আপডেট)।
+# ম্যানুয়ালি Actions ট্যাব থেকে "Run workflow" দিয়ে seed / admin bootstrap-ও চালানো যায়।
+#
+# ডেটাবেজ URL পাওয়ার ক্রম:
+#   ১. DATABASE_URL (বা NEON_DATABASE_URL) repo secret থাকলে সেটাই ব্যবহৃত হয়।
+#   ২. না থাকলে Neon GitHub integration-এর NEON_API_KEY secret + NEON_PROJECT_ID
+#      variable দিয়ে Neon API থেকে ডিফল্ট (main) ব্রাঞ্চের connection URI বের করা হয়।
+#   ৩. দুটোর কিছুই না থাকলে স্পষ্ট নির্দেশনাসহ এরর — ভুয়া সাকসেস নয়।
+
+on:
+  push:
+    branches: [main, "arena/**"]
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Run db:seed after migrate (settings, coupons, demo catalog)"
+        type: boolean
+        default: false
+      bootstrap_admin:
+        description: "Create owner admin from ADMIN_EMAIL / ADMIN_PASSWORD secrets"
+        type: boolean
+        default: false
+
+concurrency:
+  group: db-migrate
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Resolve database URL
+        env:
+          SECRET_DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.NEON_DATABASE_URL }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+
+          if [ -n "$SECRET_DATABASE_URL" ]; then
+            echo "DATABASE_URL secret পাওয়া গেছে — সেটাই ব্যবহার হচ্ছে।"
+            echo "DATABASE_URL=$SECRET_DATABASE_URL" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          if [ -z "$NEON_API_KEY" ] || [ -z "$NEON_PROJECT_ID" ]; then
+            fail "DATABASE_URL secret নেই এবং Neon integration-এর NEON_API_KEY secret / NEON_PROJECT_ID variable-ও পাওয়া যায়নি। Repo Settings → Secrets and variables → Actions → New repository secret: নাম DATABASE_URL, মান = Neon Dashboard → Connection Details-এর pooled connection string।"
+          fi
+
+          echo "DATABASE_URL secret নেই — Neon API দিয়ে ডিফল্ট ব্রাঞ্চের URL বের করা হচ্ছে..."
+          API="https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID"
+          AUTH="Authorization: Bearer $NEON_API_KEY"
+
+          BRANCH_ID=$(curl -fsS -H "$AUTH" "$API/branches" | jq -r '[.branches[] | select(.default == true)][0].id // empty') \
+            || fail "Neon API: ব্রাঞ্চ তালিকা পাওয়া যায়নি (NEON_API_KEY/NEON_PROJECT_ID ঠিক আছে?)"
+          [ -n "$BRANCH_ID" ] || fail "Neon প্রজেক্টে ডিফল্ট ব্রাঞ্চ পাওয়া যায়নি।"
+
+          DB_NAME=$(curl -fsS -H "$AUTH" "$API/databases?branch_id=$BRANCH_ID" | jq -r '.databases[0].name // empty') || fail "Neon API: ডেটাবেজ তালিকা পাওয়া যায়নি।"
+          ROLE_NAME=$(curl -fsS -H "$AUTH" "$API/roles?branch_id=$BRANCH_ID" | jq -r '.roles[0].name // empty') || fail "Neon API: রোল তালিকা পাওয়া যায়নি।"
+          [ -n "$DB_NAME" ] && [ -n "$ROLE_NAME" ] || fail "Neon ডেটাবেজ/রোল নাম পাওয়া যায়নি (db='$DB_NAME', role='$ROLE_NAME')।"
+
+          URL=$(curl -fsS -H "$AUTH" "$API/connection_uri?branch_id=$BRANCH_ID&database_name=$DB_NAME&role_name=$ROLE_NAME" | jq -r '.uri // empty') || fail "Neon API: connection URI পাওয়া যায়নি।"
+          [ -n "$URL" ] || fail "Neon connection URI খালি ফিরেছে।"
+
+          echo "::add-mask::$URL"
+          HOST=$(printf '%s' "$URL" | sed -E 's|.*@([^/]+)/.*|\1|')
+          echo "URL মিলেছে — host: $HOST, db: $DB_NAME, role: $ROLE_NAME"
+          echo "DATABASE_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Apply SQL migrations (drizzle/)
+        env:
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+        run: |
+          set +e
+          OUT=$(npm run db:migrate 2>&1)
+          CODE=$?
+          set -e
+          SANITIZED=$(printf '%s' "$OUT" | sed -E 's|postgres(ql)?://[^@/[:space:]]+@|postgres://***:***@|g' | tail -n 30)
+          printf '%s\n' "$SANITIZED"
+          if [ "$CODE" -ne 0 ]; then
+            printf '::error::db:migrate ব্যর্থ (exit %s): %s\n' "$CODE" "$(printf '%s' "$SANITIZED" | tr '\n' ' ' | cut -c1-450)"
+            exit "$CODE"
+          fi
+
+      - name: Seed settings, coupons and demo catalog
+        if: ${{ github.event.inputs.seed == 'true' }}
+        run: |
+          set +e
+          OUT=$(npm run db:seed 2>&1)
+          CODE=$?
+          set -e
+          SANITIZED=$(printf '%s' "$OUT" | sed -E 's|postgres(ql)?://[^@/[:space:]]+@|postgres://***:***@|g' | tail -n 20)
+          printf '%s\n' "$SANITIZED"
+          if [ "$CODE" -ne 0 ]; then
+            printf '::error::db:seed ব্যর্থ (exit %s): %s\n' "$CODE" "$(printf '%s' "$SANITIZED" | tr '\n' ' ' | cut -c1-450)"
+            exit "$CODE"
+          fi
+
+      - name: Bootstrap owner admin account
+        if: ${{ github.event.inputs.bootstrap_admin == 'true' }}
+        env:
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+        run: |
+          set +e
+          OUT=$(npm run db:bootstrap-admin 2>&1)
+          CODE=$?
+          set -e
+          SANITIZED=$(printf '%s' "$OUT" | sed -E 's|postgres(ql)?://[^@/[:space:]]+@|postgres://***:***@|g' | tail -n 20)
+          printf '%s\n' "$SANITIZED"
+          if [ "$CODE" -ne 0 ]; then
+            printf '::error::bootstrap-admin ব্যর্থ (exit %s): %s\n' "$CODE" "$(printf '%s' "$SANITIZED" | tr '\n' ' ' | cut -c1-450)"
+            exit "$CODE"
+          fi

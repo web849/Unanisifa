@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Unani Sifa">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#073A2E"/>
+      <stop offset="1" stop-color="#0B5D4A"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.18" r="0.5">
+      <stop offset="0" stop-color="#C9A227" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#C9A227" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g fill="none" stroke="#DDE9E1" stroke-opacity="0.16" stroke-width="2">
+    <circle cx="120" cy="540" r="220"/>
+    <circle cx="1080" cy="90" r="180"/>
+  </g>
+  <!-- mark: mortar + leaf -->
+  <g transform="translate(120 210)">
+    <path d="M0 120 Q0 210 105 210 Q210 210 210 120 Z" fill="#DDE9E1"/>
+    <rect x="-18" y="102" width="246" height="24" rx="12" fill="#C9A227"/>
+    <path d="M105 96 C105 40 150 8 196 4 C196 60 156 92 105 96 Z" fill="#0E7A61" stroke="#DDE9E1" stroke-width="3"/>
+    <path d="M105 96 C105 96 128 52 196 4" stroke="#DDE9E1" stroke-width="3" fill="none"/>
+  </g>
+  <text x="390" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="96" fill="#FAF8F2" font-weight="700">ইউনানী সিফা</text>
+  <text x="392" y="366" font-family="Georgia, 'Times New Roman', serif" font-size="38" fill="#DDE9E1" font-style="italic">Unani Sifa</text>
+  <rect x="392" y="400" width="180" height="4" rx="2" fill="#C9A227"/>
+  <text x="392" y="462" font-family="'Noto Sans Bengali', 'Hind Siliguri', sans-serif" font-size="34" fill="#DDE9E1">প্রাকৃতিক ও ইউনানী চিকিৎসার বিশ্বস্ত ঠিকানা</text>
+  <text x="392" y="516" font-family="'Noto Sans Bengali', 'Hind Siliguri', sans-serif" font-size="28" fill="#C9A227">সারাদেশে ক্যাশ অন ডেলিভারি · unanisifa.com</text>
+</svg>
