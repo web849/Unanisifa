@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(_request: Request, context: { params: Promise<{ key: string[] }> }) {
   const { key } = await context.params;
-  const config = getR2Config();
+  const config = await getR2Config();
   if (!config) return new Response("Storage not configured", { status: 503 });
 
   const objectKey = key.join("/");

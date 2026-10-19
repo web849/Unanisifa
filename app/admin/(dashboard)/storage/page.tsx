@@ -1,5 +1,6 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { StorageUploader } from "@/components/admin/storage-uploader";
+import { R2SetupForm } from "@/components/admin/r2-setup-form";
 import { getAdminSession } from "@/lib/auth/session";
 import { getR2Config, MEDIA_FOLDERS } from "@/lib/integrations/r2";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
@@ -13,7 +14,7 @@ export default async function AdminStoragePage() {
   const session = await getAdminSession();
   if (!session) return null;
 
-  const r2 = getR2Config();
+  const r2 = await getR2Config();
 
   let rows: Array<{ id: string; url: string; objectKey: string; mimeType: string; sizeBytes: number; folder: string; alt: string | null; createdAt: Date }> = [];
   if (isDatabaseConfigured) {
@@ -39,15 +40,7 @@ export default async function AdminStoragePage() {
       {r2 ? (
         <StorageUploader folders={[...MEDIA_FOLDERS]} />
       ) : (
-        <div className="pending-note mb-4">
-          <span>
-            Pending — R2 uploads are disabled because environment variables are missing. Set{" "}
-            <span className="mono">R2_ACCOUNT_ID</span>, <span className="mono">R2_ACCESS_KEY_ID</span>,{" "}
-            <span className="mono">R2_SECRET_ACCESS_KEY</span>, <span className="mono">R2_BUCKET</span> (optionally{" "}
-            <span className="mono">R2_PUBLIC_BASE_URL</span>) to enable. Until then, product images can use local files under{" "}
-            <span className="mono">/public</span> (e.g. <span className="mono">/products/p-01.svg</span>).
-          </span>
-        </div>
+        <R2SetupForm />
       )}
 
       <div className="panel">
