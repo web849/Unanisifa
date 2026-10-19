@@ -10,6 +10,11 @@ const KEY_LABELS: Record<string, string> = {
   telegram_chat_id: "Telegram chat id",
   resend_api_key: "Resend API key (email)",
   meta_capi_token: "Meta Conversions API token",
+  r2_account_id: "R2 Account ID",
+  r2_access_key_id: "R2 Access Key ID",
+  r2_secret_access_key: "R2 Secret Access Key",
+  r2_bucket: "R2 Bucket",
+  r2_public_base_url: "R2 Public Base URL (optional)",
 };
 
 export function IntegrationsManager({

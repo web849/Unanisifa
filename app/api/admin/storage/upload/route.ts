@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const denied = await requireAdminWrite(session, reqContext.clientIpHash, "storage");
   if (denied) return denied;
 
-  const config = getR2Config();
+  const config = await getR2Config();
   if (!config) {
     return jsonError(
       503,

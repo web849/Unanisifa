@@ -4,6 +4,8 @@
  */
 
 import { createHmac, createHash } from "node:crypto";
+import { resolveSecret } from "./secrets";
+import { isDatabaseConfigured } from "../db";
 
 export type R2Config = {
   accountId: string;
@@ -13,19 +15,43 @@ export type R2Config = {
   publicBaseUrl?: string;
 };
 
-export function getR2Config(): R2Config | null {
-  const accountId = process.env.R2_ACCOUNT_ID?.trim();
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
-  const bucket = process.env.R2_BUCKET?.trim();
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) return null;
-  return {
-    accountId,
-    accessKeyId,
-    secretAccessKey,
-    bucket,
-    publicBaseUrl: process.env.R2_PUBLIC_BASE_URL?.trim() || undefined,
-  };
+export async function getR2Config(): Promise<R2Config | null> {
+  // Fast path — env directly set (existing deploys)
+  const envAccountId = process.env.R2_ACCOUNT_ID?.trim();
+  const envAccessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
+  const envSecretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
+  const envBucket = process.env.R2_BUCKET?.trim();
+  if (envAccountId && envAccessKeyId && envSecretAccessKey && envBucket) {
+    return {
+      accountId: envAccountId,
+      accessKeyId: envAccessKeyId,
+      secretAccessKey: envSecretAccessKey,
+      bucket: envBucket,
+      publicBaseUrl: process.env.R2_PUBLIC_BASE_URL?.trim() || undefined,
+    };
+  }
+
+  // Vault / DB fallback — only if database is available
+  if (!isDatabaseConfigured) return null;
+  try {
+    const [accountId, accessKeyId, secretAccessKey, bucket, publicBaseUrl] = await Promise.all([
+      resolveSecret("r2_account_id", process.env.R2_ACCOUNT_ID),
+      resolveSecret("r2_access_key_id", process.env.R2_ACCESS_KEY_ID),
+      resolveSecret("r2_secret_access_key", process.env.R2_SECRET_ACCESS_KEY),
+      resolveSecret("r2_bucket", process.env.R2_BUCKET),
+      resolveSecret("r2_public_base_url", process.env.R2_PUBLIC_BASE_URL),
+    ]);
+    if (!accountId || !accessKeyId || !secretAccessKey || !bucket) return null;
+    return {
+      accountId,
+      accessKeyId,
+      secretAccessKey,
+      bucket,
+      publicBaseUrl: publicBaseUrl || undefined,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export const MEDIA_FOLDERS = ["products", "banners", "brand", "popups"] as const;

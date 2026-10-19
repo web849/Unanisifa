@@ -13,6 +13,11 @@ export const VAULT_KEYS = [
   "telegram_chat_id",
   "resend_api_key",
   "meta_capi_token",
+  "r2_account_id",
+  "r2_access_key_id",
+  "r2_secret_access_key",
+  "r2_bucket",
+  "r2_public_base_url",
 ] as const;
 
 const schema = z.object({
