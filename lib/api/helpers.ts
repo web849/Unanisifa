@@ -27,12 +27,20 @@ export function jsonOk(data: Record<string, unknown>, status = 200) {
 }
 
 /**
- * মিউটেশন রুট গার্ড — same-origin (Origin/Referer) + POST-only।
- * ব্যর্থ হলে 403।
+ * স্টেট-চেঞ্জিং HTTP মেথড — এগুলোই মিউটেশন হিসেবে গণ্য।
+ * অ্যাডমিনের সব "সেভ / আপডেট / ডিলিট" কল PATCH, PUT আর DELETE দিয়ে আসে
+ * (যেমন সেটিংস সেভ, প্রোডাক্ট এডিট, কুপন আপডেট), তাই এগুলো ব্লক করলে
+ * পুরো রাইট পাথ নষ্ট হয় — শুধু POST নয়।
+ */
+const MUTATION_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
+/**
+ * মিউটেশন রুট গার্ড — same-origin (Origin/Referer) + স্টেট-চেঞ্জিং মেথড।
+ * মেথড ম্যাচ না করলে 405, same-origin না হলে 403।
  */
 export function guardMutation(request: Request): NextResponse | null {
-  if (request.method !== "POST") {
-    return jsonError(405, "এই অপারেশনের জন্য POST প্রয়োজন।");
+  if (!MUTATION_METHODS.has(request.method.toUpperCase())) {
+    return jsonError(405, "এই অপারেশনের জন্য POST/PATCH/PUT/DELETE প্রয়োজন।");
   }
   if (!isSameOriginRequest(request.headers)) {
     return jsonError(403, "অনুমোদিত নয়: রিকোয়েস্টটি এই সাইট থেকে আসেনি।");
