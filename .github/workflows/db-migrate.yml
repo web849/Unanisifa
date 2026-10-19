@@ -1,7 +1,11 @@
 name: db-migrate
 
-# main-এ push হলেই SQL মাইগ্রেশন অটো চলে (টেবিল তৈরি/আপডেট)।
-# ম্যানুয়ালি Actions ট্যাব থেকে "Run workflow" দিয়ে seed / admin bootstrap-ও চালানো যায়।
+# ডেটাবেজ মাইগ্রেশন এখন Vercel বিল্ডের ভেতরেই চলে (vercel.json →
+# scripts/vercel-build.mjs), প্রোডাকশন ডিপ্লয়ের ঠিক আগে — তাই এখানে push-এ
+# আর অটো-ট্রিগার নেই; নইলে দুটি রান একসাথে হওয়ার সুযোগ থাকে এবং
+# arena/** ব্রাঞ্চ থেকে প্রোডাকশন ডেটাবেজে মাইগ্রেশন চলে যায়।
+# এই workflow এখন শুধু ম্যানুয়াল অপারেশনের জন্য: migrate, seed,
+# admin bootstrap / password reset।
 #
 # ডেটাবেজ URL পাওয়ার ক্রম:
 #   ১. DATABASE_URL (বা NEON_DATABASE_URL) repo secret থাকলে সেটাই ব্যবহৃত হয়।
@@ -10,8 +14,6 @@ name: db-migrate
 #   ৩. দুটোর কিছুই না থাকলে স্পষ্ট নির্দেশনাসহ এরর — ভুয়া সাকসেস নয়।
 
 on:
-  push:
-    branches: [main, "arena/**"]
   workflow_dispatch:
     inputs:
       seed:

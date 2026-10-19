@@ -1,0 +1,40 @@
+name: ci
+
+# প্রতিটি PR ও main-এ push-এ টাইপচেক, লিন্ট, ইউনিট টেস্ট ও প্রোডাকশন বিল্ড।
+# Vercel বিল্ড লিন্ট স্কিপ করে, তাই এই workflow-ই লিন্ট/টেস্টের আসল গেট।
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - run: npm run typecheck
+
+      - run: npm run lint
+
+      - run: npm test
+
+      - run: npm run build

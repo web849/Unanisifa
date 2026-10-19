@@ -48,6 +48,7 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 | `IP_HASH_SECRET` | ফ্রড সিগন্যালে IP হ্যাশ | ফ্রড স্কোরের IP অংশ বন্ধ |
 | `CRON_SECRET` | `/api/cron/*` প্রটেকশন | ক্রন ৪০১ ফেরত দেয় |
 | `NEXT_PUBLIC_SITE_URL` | canonical/OG/ওয়েবহুক লিংক | লোকাল URL ধরা হয় |
+| `ALLOW_PREVIEW_DB_MIGRATIONS` | Vercel **Preview** বিল্ডে মাইগ্রেশন চালু | Preview-তে মাইগ্রেশন হয় না (প্রোডাকশন সুরক্ষিত) |
 | `R2_*` (৫টি) | মিডিয়া আপলোড (Cloudflare R2) | আপলোড বন্ধ; "URL পেস্ট করুন" চালু |
 | `TELEGRAM_*`, `RESEND_*`, `META_*` | নোটিফিকেশন/ট্র্যাকিং ডিফল্ট | অ্যাডমিন ভল্টে সেভ করলেও চলে; না থাকলে Pending |
 
@@ -72,10 +73,12 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 
 1. রিপো GitHub-এ প্রাইভেট; `main` = প্রোডাকশন। ফিচার ব্রাঞ্চ → PR → merge হলে Vercel অটো-ডিপ্লয়।
 2. Vercel প্রজেক্টে env বসান (Production + Preview): অন্তত `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `IP_HASH_SECRET`, `CRON_SECRET`, `NEXT_PUBLIC_SITE_URL`।
-3. মাইগ্রেশন বিল্ডের আগে অটো চলে — `vercel.json`-এ `buildCommand: npm run db:migrate && next build`। এছাড়া `main`-এ push হলে GitHub Actions (`.github/workflows/db-migrate.yml`)ও মাইগ্রেশন চালায় — দুটো পথই idempotent (`__migrations` টেবিল), তাই ডুপ্লিকেট লাগে না। Actions থেকে ম্যানুয়ালি dispatch করে seed/admin-bootstrap-ও চালানো যায়। Preview ডিপ্লয়ে Neon preview branch-এর `DATABASE_URL` দিলে মাইগ্রেশন সেখানেও প্রয়োগ হয়।
-4. দৈনিক ক্রন (`vercel.json`): `0 3 * * *` UTC = সকাল ৯টা ঢাকা — ফেইল হওয়া নোটিফিকেশন রিট্রাই + ট্র্যাকিং কিউ ফ্লাশ।
-5. কাস্টম ডোমেইন যুক্ত করার পর Admin → Settings → Branding-এ `siteUrl` আপডেট করুন।
-6. `.env` কখনো কমিট করবেন না — শুধু `.env.example` কমিট থাকে।
+3. মাইগ্রেশন প্রোডাকশন বিল্ডের আগে অটো চলে — `vercel.json` → `node scripts/vercel-build.mjs`, যা `db:migrate` সফল হলেই `next build` করে। দুটি বিল্ড একসাথে চললেও `__migration_lock` টেবিলের লক একবারে একটিকেই ঢোকে, আর প্রতিটি SQL ফাইল ট্রানজেকশনে প্রয়োগ হয় (ব্যর্থ হলে সম্পূর্ণ রোলব্যাক, আধা-স্কিমা নয়)।
+4. Preview ডিপ্লয় ডিফল্টে মাইগ্রেশন চালায় না — প্রিভিউ থেকে প্রোডাকশন স্কিমা বদলাবে না। Preview-তে আলাদা Neon ব্রাঞ্চ ব্যবহার করলে Vercel → Preview env-এ `ALLOW_PREVIEW_DB_MIGRATIONS=1` দিন।
+5. `db-migrate` GitHub Actions এখন শুধু ম্যানুয়াল (`workflow_dispatch`) — seed, admin bootstrap, password reset-এর জন্য। আলাদা CI workflow (`.github/workflows/ci.yml`) প্রতিটি PR ও `main` push-এ typecheck + lint + test + build চালায়; Vercel বিল্ডও লিন্ট ও টাইপচেক করে, তাই ভাঙা কোড ডিপ্লয় হয় না।
+6. দৈনিক ক্রন (`vercel.json`): `0 3 * * *` UTC = সকাল ৯টা ঢাকা — ফেইল হওয়া নোটিফিকেশন রিট্রাই + ট্র্যাকিং কিউ ফ্লাশ।
+7. কাস্টম ডোমেইন যুক্ত করার পর Admin → Settings → Branding-এ `siteUrl` আপডেট করুন।
+8. `.env` কখনো কমিট করবেন না — শুধু `.env.example` কমিট থাকে।
 
 ## লঞ্চ ফ্লো (অনারের জন্য ১৫ মিনিট)
 
