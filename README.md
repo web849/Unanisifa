@@ -61,7 +61,7 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 | --- | --- |
 | `npm run dev` / `build` / `start` | ডেভ সার্ভার / প্রোডাকশন বিল্ড / সার্ভ |
 | `npm run qa` | typecheck + lint + test + build (একসাথে) |
-| `npm test` | ১২৬টি ইউনিট টেস্ট (pricing, coupons, fraud, status, validation, mystery, utils, media-snippet, emoji-scan) |
+| `npm test` | ১৩০টি ইউনিট টেস্ট (pricing, coupons, fraud, status, validation, mystery, utils, media-snippet, landing-html-tokens, emoji-scan) |
 | `npm run db:generate` | স্কিমা বদলালে drizzle-kit দিয়ে নতুন মাইগ্রেশন |
 | `npm run db:migrate` | কমিট করা SQL মাইগ্রেশন প্রয়োগ |
 | `npm run db:seed` / `db:seed-catalog` | সেটিংস+কুপন / ডেমো পণ্য-ক্যাটাগরি-ব্যানার-CMS |
@@ -109,6 +109,17 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 4. HTML স্যানিটাইজার script/iframe/form/event-handler বাদ দেয়, কিন্তু `<img>`, লেআউট ট্যাগ ও inline CSS পুরোপুরি অনুমোদিত — তাই কপি করা `<img>` কোড নিরাপদে কাজ করে।
 
 মিডিয়া তালিকার API: `GET /api/admin/storage?folder=media&q=নাম&limit=60` (অ্যাডমিন লগইন প্রয়োজন)।
+
+**পণ্য ও চেকআউট কানেক্টেড HTML ফরম্যাট:**
+
+নতুন **HTML Code** ব্লক যোগ করলেই পণ্যের ছবি, নাম, বিবরণ, বর্তমান/আগের দাম, ছাড়, প্যাকেজ, উপাদান, সেবনবিধি, Order ও Checkout বোতামসহ পুরো ফরম্যাট ডিফল্ট হিসেবে আসে। পুরনো ব্লকেও HTML এডিটরের **"পুরো ফরম্যাট বসান"** বোতামে একই ফরম্যাট আনা যায়। ফরম্যাটটি ঠিকভাবে কাজ করতে যা রাখতেই হবে:
+
+1. **Page settings**-এ একটি Main product নির্বাচন (অথবা HTML ব্লকে আলাদা Connected product)।
+2. পেজে একটি **Order Form** ব্লক — `{{order_url}}` সেই ফর্মে নিয়ে যায়।
+3. নাম/দাম/ছবি হাতে না লিখে টোকেন ব্যবহার: `{{product_name}}`, `{{product_price}}`, `{{product_old_price}}`, `{{product_image}}`, `{{product_description}}`, `{{product_ingredients}}`, `{{product_dosage}}`। পণ্যের তথ্য বদলালে HTML নিজে থেকে আপডেট হয়।
+4. বোতামের লিংকে `{{order_url}}` (এই পেজের অর্ডার ফর্ম) ও `{{checkout_url}}` (পণ্য কার্টে যোগ হয়ে Checkout, পেজের কুপনসহ) ব্যবহার। এছাড়া `{{product_url}}`, `{{whatsapp_url}}`, `{{phone_url}}`, `{{coupon_code}}` ও `{{medical_disclaimer}}` টোকেন আছে; পুরো তালিকা এডিটরের **"টোকেন তালিকা"** বোতামে — ক্লিক করলেই টোকেন কার্সরের জায়গায় বসে।
+
+ডাইরেক্ট চেকআউট লিংকের রূপ: `/checkout?buy=<productId>&qty=1&variant=<id>&coupon=<code>` (সবগুলোই ঐচ্ছিক `buy` ছাড়া)। চেকআউট পেজ পণ্যটি একবার কার্টে যোগ করে, তারপর URL থেকে `buy` মুছে দেয় যাতে রিফ্রেশে দ্বিগুণ না হয়; দাম আগের মতোই সার্ভারে যাচাই হয়।
 
 ## কুরিয়ার API ও অটোমেশন
 

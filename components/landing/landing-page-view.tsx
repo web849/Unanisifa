@@ -130,6 +130,7 @@ export function LandingPageView({
             products,
             reviews,
             brand,
+            couponCode: page.couponCode,
           });
           if (!rendered) return null;
 

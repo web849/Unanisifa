@@ -9,6 +9,12 @@ import {
   type LandingSectionType,
 } from "@/lib/landing/sections";
 import { sanitizeLandingHtml } from "@/lib/landing/html";
+import {
+  CONNECTED_PRODUCT_HTML_TEMPLATE,
+  LANDING_HTML_TOKEN_GUIDE,
+  applyLandingHtmlTokens,
+} from "@/lib/landing/html-tokens";
+import type { BrandSettings } from "@/lib/config";
 import { formatTakaEn } from "@/lib/utils";
 import { UploadButton } from "@/components/admin/image-field";
 import { MediaPicker } from "@/components/admin/media-library";
@@ -20,6 +26,8 @@ type Props = {
   section: LandingSection;
   products: LandingProduct[];
   mainProduct: LandingProduct | null;
+  brand?: BrandSettings;
+  couponCode?: string | null;
   readOnly?: boolean;
   onChangeSettings: (id: number, patch: Settings) => void;
   onReplaceSettings: (id: number, settings: Settings) => void;
@@ -396,6 +404,8 @@ export function LandingSectionEditor({
   section,
   products,
   mainProduct,
+  brand,
+  couponCode,
   readOnly = false,
   onChangeSettings,
   onReplaceSettings,
@@ -412,6 +422,7 @@ export function LandingSectionEditor({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [rawJson, setRawJson] = useState(() => JSON.stringify(section.settings, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [tokenGuideOpen, setTokenGuideOpen] = useState(false);
 
   /* HTML এডিটরে কার্সরের শেষ অবস্থান — মিডিয়া-পিকার/স্নিপেট ওই জায়গায় বসে */
   const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -446,6 +457,24 @@ export function LandingSectionEditor({
         element.setSelectionRange(caret, caret);
         htmlCursorRef.current = caret;
       }
+    });
+  };
+
+  /* পুরো কানেক্টেড ফরম্যাট বসানো — বর্তমান HTML থাকলে নিশ্চিত করে বদলায় */
+  const applyConnectedFormat = () => {
+    if (readOnly) return;
+    const current = str("html").trim();
+    if (
+      current &&
+      current !== CONNECTED_PRODUCT_HTML_TEMPLATE.trim() &&
+      !window.confirm("বর্তমান HTML মুছে পণ্য ও চেকআউট কানেক্টেড পুরো ফরম্যাট বসানো হবে। এগিয়ে যাবেন?")
+    ) {
+      return;
+    }
+    set("html", CONNECTED_PRODUCT_HTML_TEMPLATE);
+    htmlCursorRef.current = CONNECTED_PRODUCT_HTML_TEMPLATE.length;
+    window.requestAnimationFrame(() => {
+      htmlTextareaRef.current?.focus();
     });
   };
 
@@ -484,6 +513,15 @@ export function LandingSectionEditor({
   const selectedProductIds = Array.isArray(settings.productIds)
     ? (settings.productIds as unknown[]).map((value) => Number(value)).filter((value) => Number.isInteger(value))
     : [];
+
+  /* HTML টোকেনের জন্য পণ্য: ব্লক-নির্দিষ্ট পণ্য থাকলে তাই, নইলে পেজের main product */
+  const htmlProduct = useMemo(() => {
+    const requestedId = Number(settings.productId);
+    if (Number.isInteger(requestedId) && requestedId > 0) {
+      return products.find((product) => product.id === requestedId) ?? mainProduct;
+    }
+    return mainProduct;
+  }, [settings.productId, products, mainProduct]);
 
   const productOptions = products.map((product) => (
     <option key={product.id} value={product.id}>
@@ -667,6 +705,70 @@ export function LandingSectionEditor({
               ))}
             </div>
           </div>
+          <div className="lp-html-format-panel">
+            <div className="row-between row-wrap">
+              <strong>পণ্য ও চেকআউট কানেক্টেড HTML ফরম্যাট</strong>
+              <div className="field-row">
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  disabled={readOnly}
+                  onClick={applyConnectedFormat}
+                >
+                  পুরো ফরম্যাট বসান
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  aria-expanded={tokenGuideOpen}
+                  onClick={() => setTokenGuideOpen((value) => !value)}
+                >
+                  টোকেন তালিকা
+                </button>
+              </div>
+            </div>
+            <label className="field mb-0">
+              <span className="label">Connected product (HTML টোকেনের জন্য)</span>
+              <select
+                className="input"
+                value={settings.productId ? String(settings.productId) : ""}
+                disabled={readOnly}
+                onChange={(event) => set("productId", event.target.value ? Number(event.target.value) : null)}
+              >
+                <option value="">Page main product</option>
+                {productOptions}
+              </select>
+              <span className="help-text">
+                {htmlProduct
+                  ? `এখন কানেক্ট আছে: ${htmlProduct.name} (${formatTakaEn(htmlProduct.price)})। নাম, দাম, ছবি ও লিংক নিজে থেকে বসবে।`
+                  : "কোনো পণ্য কানেক্ট নেই। Page settings এ Main product দিন অথবা এখান থেকে পণ্য বেছে নিন।"}
+              </span>
+            </label>
+            <ol className="lp-html-checklist">
+              <li>পেজে একটি Order Form ব্লক রাখুন — {`{{order_url}}`} ওই ফর্মে নিয়ে যাবে।</li>
+              <li>{`{{checkout_url}}`} পণ্যটি কার্টে যোগ করে Checkout পেজ খুলবে।</li>
+              <li>নাম/দাম/ছবি হাতে না লিখে টোকেন ব্যবহার করুন — পণ্য বদলালে অটো আপডেট।</li>
+              <li>নিজের R2 ছবি: মিডিয়া প্যানেল থেকে বসান অথবা img এর src তে লিংক দিন।</li>
+              <li>শুধু ইনলাইন style চলবে; script, form, iframe ও style ট্যাগ বাদ যাবে।</li>
+            </ol>
+            {tokenGuideOpen ? (
+              <div className="lp-token-grid" aria-label="HTML টোকেন তালিকা">
+                {LANDING_HTML_TOKEN_GUIDE.map((item) => (
+                  <button
+                    key={item.token}
+                    type="button"
+                    className="lp-token-btn"
+                    disabled={readOnly}
+                    title={`${item.label} — ক্লিক করলে কার্সরের জায়গায় বসবে`}
+                    onClick={() => insertHtml(item.token)}
+                  >
+                    <code>{item.token}</code>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <MediaPicker
             disabled={readOnly}
             autoInsertOnUpload
@@ -697,7 +799,15 @@ export function LandingSectionEditor({
               <span className="label">Rendered preview</span>
               <div
                 className="lp-html"
-                dangerouslySetInnerHTML={{ __html: sanitizeLandingHtml(str("html")) }}
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeLandingHtml(
+                    applyLandingHtmlTokens(str("html"), {
+                      product: htmlProduct,
+                      brand,
+                      couponCode,
+                    }),
+                  ),
+                }}
               />
             </div>
           ) : null}

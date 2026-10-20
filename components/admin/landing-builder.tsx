@@ -1010,6 +1010,8 @@ export function LandingBuilder({
                   section={selected}
                   products={products}
                   mainProduct={mainProduct}
+                  brand={brand}
+                  couponCode={draft.couponCode}
                   readOnly={readOnly}
                   onChangeSettings={updateSettings}
                   onReplaceSettings={replaceSettings}

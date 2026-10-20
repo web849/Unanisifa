@@ -41,7 +41,10 @@ test("starter template has unique ids and the mandatory blocks", () => {
 test("new HTML and popup blocks arrive with usable defaults", () => {
   const html = createLandingSection("html", 2, { pageTitle: "পেজ" });
   assert.equal(typeof html.settings.html, "string");
-  assert.match(String(html.settings.html), /কাস্টম HTML/);
+  assert.match(String(html.settings.html), /কানেক্টেড প্রোডাক্ট HTML ফরম্যাট/);
+  assert.match(String(html.settings.html), /\{\{product_name\}\}/);
+  assert.match(String(html.settings.html), /\{\{order_url\}\}/);
+  assert.match(String(html.settings.html), /\{\{checkout_url\}\}/);
 
   const popup = createLandingSection("popup", 3, { pageTitle: "পেজ" });
   assert.equal(popup.settings.frequency, "once_session");

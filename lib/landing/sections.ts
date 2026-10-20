@@ -6,6 +6,8 @@
  * React/Node-নির্ভর কোড থাকবে না, শুধু ডেটা ও ডিফল্ট।
  */
 
+import { CONNECTED_PRODUCT_HTML_TEMPLATE } from "./html-tokens";
+
 export type LandingSectionType =
   // Layout & Content
   | "hero"
@@ -77,7 +79,7 @@ export const SECTION_CATALOG: Array<{
   { type: "split", group: "layout", label: "Split", description: "ছবি + টেক্সট দুই কলাম" },
   { type: "images", group: "layout", label: "Images", description: "একাধিক ছবির গ্রিড" },
   { type: "video", group: "layout", label: "Video", description: "এমবেডেড ভিডিও (YouTube)" },
-  { type: "html", group: "layout", label: "HTML Code", description: "নিজের HTML ও ইনলাইন CSS" },
+  { type: "html", group: "layout", label: "HTML Code", description: "পণ্য/চেকআউট টোকেনসহ নিজের HTML ও ইনলাইন CSS" },
   { type: "products", group: "commerce", label: "Products", description: "পণ্য কার্ড গ্রিড" },
   { type: "order_form", group: "commerce", label: "Order Form", description: "ইনলাইন অর্ডার ফর্ম" },
   { type: "cta", group: "commerce", label: "CTA", description: "কল-টু-অ্যাকশন ব্যানার" },
@@ -132,12 +134,8 @@ function isoLocalDateTime(date: Date): string {
   )}:${pad(date.getMinutes())}`;
 }
 
-const DEFAULT_HTML = [
-  '<div style="padding:20px;border:1px solid #e4e0d3;border-radius:12px;background:#ffffff">',
-  '  <h3 style="margin:0 0 8px;color:#073a2e;font-size:20px">কাস্টম HTML ব্লক</h3>',
-  '  <p style="margin:0;color:#5b6b64">এখানে নিজের HTML লিখুন। ইনলাইন CSS কাজ করবে; script ও event handler সরিয়ে ফেলা হয়।</p>',
-  "</div>",
-].join("\n");
+/* নতুন HTML ব্লক পণ্য ও চেকআউট কানেক্টেড ফরম্যাট দিয়েই শুরু হয় */
+const DEFAULT_HTML = CONNECTED_PRODUCT_HTML_TEMPLATE;
 
 /**
  * টাইপ অনুযায়ী শুরুর সেটিংস। নতুন ব্লক যোগ করলে সঙ্গে সঙ্গে দৃশ্যমান হবে —

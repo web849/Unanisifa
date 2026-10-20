@@ -6723,3 +6723,65 @@ form[data-drag-over="true"] {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 }
+
+/* ---- ল্যান্ডিং HTML ব্লক: কানেক্টেড ফরম্যাট প্যানেল ও টোকেন তালিকা ---- */
+.lp-html-format-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-html-checklist {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.lp-token-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.lp-token-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lp-token-btn:hover:not(:disabled) {
+  border-color: var(--emerald);
+}
+
+.lp-token-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.lp-token-btn code {
+  font-size: 12px;
+  color: var(--emerald-dark, #073a2e);
+  word-break: break-all;
+}
+
+.lp-token-btn span {
+  font-size: 12px;
+  color: var(--muted);
+}

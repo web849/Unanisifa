@@ -23,6 +23,7 @@ import {
 import type { LandingSection } from "@/lib/landing/sections";
 import type { LandingProduct } from "@/lib/landing/product-types";
 import { sanitizeLandingHtml } from "@/lib/landing/html";
+import { applyLandingHtmlTokens } from "@/lib/landing/html-tokens";
 import type { ProductReview } from "@/lib/db/schema";
 import { formatTaka, toBanglaDigits } from "@/lib/utils";
 import { telLink, whatsappLink, phoneDisplay } from "@/lib/contact-links";
@@ -49,6 +50,7 @@ export type LandingRenderContext = {
   products: LandingProduct[];
   reviews: ProductReview[];
   brand: BrandSettings;
+  couponCode?: string | null;
 };
 
 function stringOr(value: unknown, fallback = ""): string {
@@ -263,7 +265,15 @@ export function renderLandingSection(
     }
 
     case "html": {
-      const html = sanitizeLandingHtml(stringOr(settings.html));
+      /* {{product_name}} জাতীয় টোকেন নির্বাচিত/প্রধান পণ্য দিয়ে পূরণ হয়,
+         তারপর আগের মতোই স্যানিটাইজ — script/form কখনো যাবে না। */
+      const html = sanitizeLandingHtml(
+        applyLandingHtmlTokens(stringOr(settings.html), {
+          product: sectionProduct(settings, context),
+          brand: context.brand,
+          couponCode: context.couponCode,
+        }),
+      );
       if (!html) return null;
       return (
         <section className={sectionClass(section)} id={anchor} key={key} style={sectionStyle(section.design)}>
