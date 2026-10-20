@@ -73,8 +73,45 @@ export default async function AdminLandingPagesPage() {
         </div>
       </div>
 
+      <div className="panel mb-4">
+        <div className="panel-head">
+          <h2 className="panel-title">ল্যান্ডিং পেজ তৈরি হচ্ছে না? — আগে এই ৪টি দেখুন</h2>
+        </div>
+        <div className="panel-body">
+          <ol className="storage-steps">
+            <li>
+              <strong>পণ্য Active আছে তো?</strong> নতুন পণ্য ডিফল্টে Draft থাকে। অর্ডার ফর্ম কাজ করতে{" "}
+              <Link href="/admin/products">Products</Link> থেকে পণ্যটি Active করুন। (তৈরির ফর্মে এখন Draft
+              পণ্যও দেখা যায়।)
+            </li>
+            <li>
+              <strong>একই নামের slug?</strong> এখন আর আটকাবে না — slug মিলে গেলে স্বয়ংক্রিয়ভাবে -2, -3
+              যোগ হয়ে নতুন পেজ তৈরি হয়।
+            </li>
+            <li>
+              <strong>ডেমো পণ্য বেছে নিলে</strong> আগে ডেমো ক্যাটালগ ইমপোর্ট হতে হয় — ফর্ম নিজেই করে দেয়।
+              ব্যর্থ হলে এখন আসল কারণটাই এরর মেসেজে দেখাবে (&quot;Network error&quot; নয়)।
+            </li>
+            <li>
+              <strong>ছবি দিয়ে HTML সাজাতে</strong> <Link href="/admin/storage">Storage (R2)</Link> পেজে ছবি
+              আপলোড করে &quot;লিংক কপি&quot; / &quot;HTML কপি&quot; করুন, তারপর বিল্ডারের HTML Code ব্লকে
+              পেস্ট করুন। বিল্ডারের HTML ব্লকের ভেতর থেকেও সরাসরি আপলোড করে ছবি বসানো যায়।
+            </li>
+          </ol>
+          {session.role === "viewer" ? (
+            <p className="error-text text-small mb-0" role="alert">
+              আপনার বর্তমান অ্যাকাউন্টের রোল viewer (শুধু দেখা যায়) — এই অ্যাকাউন্টে পেজ তৈরি/সেভ করা
+              যাবে না। owner/admin/operator অ্যাকাউন্ট দিয়ে লগইন করুন।
+            </p>
+          ) : null}
+        </div>
+      </div>
+
       {!isDatabaseConfigured ? (
-        <div className="pending-note">Pending — database not configured.</div>
+        <div className="pending-note">
+          Pending — database not configured. DATABASE_URL সেট না থাকলে ল্যান্ডিং পেজ তৈরি করা যাবে না
+          (Vercel-এর Settings-এ গিয়ে Environment Variables-এ DATABASE_URL দিন, তারপর Redeploy করুন)।
+        </div>
       ) : (
         <div className="table-wrap">
           <table className="table">

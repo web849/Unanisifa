@@ -2,15 +2,31 @@
 
 import { useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
+import { MediaCopyActions } from "@/components/admin/media-copy-actions";
 
 export const IMAGE_ACCEPT =
   "image/jpeg,image/png,image/webp,image/avif,image/svg+xml,image/x-icon,.svg,.ico";
 
+/** আপলোডের বিস্তারিত ফলাফল — মিডিয়া লাইব্রেরি ও HTML-ইনসার্টে ব্যবহৃত হয় */
+export type UploadedImage = {
+  id: string | null;
+  url: string;
+  objectKey: string;
+  sizeBytes: number;
+  storage: string;
+  mimeType: string;
+  alt: string;
+};
+
 /**
- * একটিমাত্র ছবি আপলোড করে URL ফেরত দেয়।
- * ব্যর্থ হলে বাংলা/ইংরেজি বার্তাসহ Error থ্রো করে।
+ * একটিমাত্র ছবি আপলোড করে বিস্তারিত ফলাফল ফেরত দেয়।
+ * ব্যর্থ হলে বাংলা বার্তাসহ Error থ্রো করে।
  */
-export async function uploadImageFile(file: File, folder: string, alt = ""): Promise<string> {
+export async function uploadImageFileDetailed(
+  file: File,
+  folder: string,
+  alt = "",
+): Promise<UploadedImage> {
   if (file.size < 64 || file.size > 5 * 1024 * 1024) {
     throw new Error("ছবি 64 B – 5 MB এর মধ্যে হতে হবে।");
   }
@@ -27,12 +43,32 @@ export async function uploadImageFile(file: File, folder: string, alt = ""): Pro
   const json = (await response.json().catch(() => null)) as {
     ok?: boolean;
     error?: string;
+    id?: string | null;
     url?: string;
+    objectKey?: string;
+    sizeBytes?: number;
+    storage?: string;
+    mimeType?: string;
+    alt?: string;
   } | null;
   if (!response.ok || !json?.ok || !json.url) {
-    throw new Error(json?.error ?? "আপলোড ব্যর্থ হয়েছে।");
+    throw new Error(json?.error ?? `আপলোড ব্যর্থ হয়েছে। (HTTP ${response.status})`);
   }
-  return json.url;
+  return {
+    id: json.id ?? null,
+    url: json.url,
+    objectKey: json.objectKey ?? "",
+    sizeBytes: json.sizeBytes ?? file.size,
+    storage: json.storage ?? "",
+    mimeType: json.mimeType ?? file.type,
+    alt: json.alt ?? alt,
+  };
+}
+
+/** একটিমাত্র ছবি আপলোড করে শুধু URL ফেরত দেয় (আগের সব কলারের জন্য) */
+export async function uploadImageFile(file: File, folder: string, alt = ""): Promise<string> {
+  const result = await uploadImageFileDetailed(file, folder, alt);
+  return result.url;
 }
 
 /**
@@ -206,6 +242,7 @@ export function ImageField({
             <X aria-hidden="true" />
             সরান
           </button>
+          <MediaCopyActions url={value} alt={alt || label} compact showOpen={false} />
         </div>
       ) : null}
       {error ? (

@@ -13,7 +13,9 @@ export default async function NewLandingPage() {
   if (!session) return null;
 
   let couponList: Array<{ code: string }> = [];
-  const catalog = await getLandingCatalog({ demoFallback: true });
+  // includeDrafts: নতুন পণ্য ডিফল্টে draft থাকে — শুধু active দেখালে নিজের
+  // তৈরি পণ্যটাই তালিকায় পাওয়া যেত না এবং ল্যান্ডিং তৈরি আটকে মনে হতো।
+  const catalog = await getLandingCatalog({ includeDrafts: true, demoFallback: true });
 
   if (isDatabaseConfigured) {
     const db = requireDb("ল্যান্ডিং");

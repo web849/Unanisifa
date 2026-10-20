@@ -12,6 +12,7 @@ import {
   type LandingThemeSlug,
 } from "@/lib/landing/sections";
 import type { LandingProduct } from "@/lib/landing/product-types";
+import { apiErrorMessage } from "@/lib/admin/api-error-message";
 import { formatTakaEn, slugify } from "@/lib/utils";
 
 export function LandingCreateForm({
@@ -40,23 +41,31 @@ export function LandingCreateForm({
 
   const importDemoIfNeeded = async (): Promise<boolean> => {
     if (!demoFallback || !chosenProduct?.isDemo) return true;
-    const response = await fetch("/api/admin/demo-catalog", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    });
-    const payload = (await response.json()) as { ok?: boolean; error?: string };
-    if (!response.ok || !payload.ok) {
-      setError(payload.error ?? "Demo catalog import failed.");
+    try {
+      const response = await fetch("/api/admin/demo-catalog", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+      } | null;
+      if (!response.ok || !payload?.ok) {
+        setError(apiErrorMessage(payload, "ডেমো ক্যাটালগ ইমপোর্ট করা যায়নি।", response.status));
+        return false;
+      }
+      return true;
+    } catch {
+      setError("নেটওয়ার্ক সমস্যা — ডেমো ক্যাটালগ ইমপোর্ট করা যায়নি। আবার চেষ্টা করুন।");
       return false;
     }
-    return true;
   };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!canWrite) {
-      setError("Your role is read-only.");
+      setError("Your role is read-only (viewer) — এই অ্যাকাউন্ট দিয়ে ল্যান্ডিং পেজ তৈরি করা যাবে না। owner/admin/operator অ্যাকাউন্ট ব্যবহার করুন।");
       return;
     }
     if (title.trim().length < 2) {
@@ -66,18 +75,17 @@ export function LandingCreateForm({
     setBusy(true);
     setError(null);
 
-    if (!(await importDemoIfNeeded())) {
-      setBusy(false);
-      return;
-    }
-
     try {
+      // আগের কোডে এই await try-এর বাইরে ছিল — ইমপোর্ট ব্যর্থ হলে বোতাম
+      // চিরকাল "Creating…" অবস্থায় আটকে থাকত, কোনো এররও দেখাত না।
+      if (!(await importDemoIfNeeded())) return;
+
       const response = await fetch("/api/admin/landing-pages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
-          slug: slug.trim() || undefined,
+          slug: slugify(slug) || undefined,
           productId: productId ? Number(productId) : null,
           themeSlug,
           couponCode: couponCode || undefined,
@@ -85,12 +93,18 @@ export function LandingCreateForm({
           sections: [],
         }),
       });
-      const json = (await response.json()) as { ok?: boolean; error?: string; id?: number };
-      if (response.ok && json.ok && json.id) {
+      const json = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        id?: number;
+        fieldErrors?: Record<string, unknown>;
+        formErrors?: unknown;
+      } | null;
+      if (response.ok && json?.ok && json.id) {
         router.push(`/admin/landing-pages/${json.id}`);
         return;
       }
-      setError(json.error ?? "Create failed.");
+      setError(apiErrorMessage(json, "ল্যান্ডিং পেজ তৈরি করা যায়নি।", response.status));
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -136,7 +150,8 @@ export function LandingCreateForm({
                 />
               </div>
               <span className="help-text">
-                শেষ URL: <span className="mono">/offer/{previewSlug}</span>
+                শেষ URL: <span className="mono">/offer/{previewSlug}</span> — এই slug আগে থেকে থাকলে
+                স্বয়ংক্রিয়ভাবে -2, -3 যোগ হয়ে নতুন URL হবে (তৈরি আটকাবে না)।
               </span>
             </label>
 
@@ -191,12 +206,20 @@ export function LandingCreateForm({
                 {products.map((product) => (
                   <option key={product.id} value={product.id}>
                     {product.name}
-                    {product.isDemo ? " (demo)" : ""} — {formatTakaEn(product.price)}
+                    {product.isDemo ? " (demo)" : product.status !== "active" ? ` (${product.status})` : ""} —{" "}
+                    {formatTakaEn(product.price)}
                   </option>
                 ))}
               </select>
               <span className="help-text">
                 Order form, ingredients ও dosage ব্লক এই পণ্য থেকে তথ্য নেবে। পরে বিল্ডারে বদলানো যাবে।
+                {products.length === 0 && !demoFallback ? (
+                  <>
+                    {" "}
+                    কোনো পণ্য পাওয়া যায়নি — আগে <Link href="/admin/products/new">Products থেকে পণ্য তৈরি করুন</Link>,
+                    অথবা পণ্য ছাড়াই পেজ তৈরি করে পরে বিল্ডারে যোগ করুন।
+                  </>
+                ) : null}
               </span>
             </label>
 
@@ -225,6 +248,12 @@ export function LandingCreateForm({
                     {chosenProduct.packageSize ? ` · ${chosenProduct.packageSize}` : ""}
                     {chosenProduct.isDemo ? " · demo product" : ""}
                   </p>
+                  {chosenProduct.status === "draft" && !chosenProduct.isDemo ? (
+                    <p className="text-small mb-0" role="note">
+                      এই পণ্যটি এখনো <strong>Draft</strong> — ল্যান্ডিং পেজ তৈরি হবে, কিন্তু অর্ডার নেওয়ার
+                      আগে Products থেকে পণ্যটি <strong>Active</strong> করে দিন।
+                    </p>
+                  ) : null}
                 </div>
               </div>
             ) : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Code2, Image as ImageIcon, Plus, Trash2 } from "lucide-react";
 import type { LandingProduct } from "@/lib/landing/product-types";
 import {
@@ -11,6 +11,8 @@ import {
 import { sanitizeLandingHtml } from "@/lib/landing/html";
 import { formatTakaEn } from "@/lib/utils";
 import { UploadButton } from "@/components/admin/image-field";
+import { MediaPicker } from "@/components/admin/media-library";
+import { MediaCopyActions } from "@/components/admin/media-copy-actions";
 
 type Settings = Record<string, unknown>;
 
@@ -134,6 +136,7 @@ function ImageUrlField({
         />
         <UploadButton folder="media" onUploaded={onChange} alt={label} />
       </div>
+      {value ? <MediaCopyActions url={value} alt={label} compact showOpen={false} /> : null}
       {hint ? <span className="help-text">{hint}</span> : null}
     </div>
   );
@@ -410,6 +413,42 @@ export function LandingSectionEditor({
   const [rawJson, setRawJson] = useState(() => JSON.stringify(section.settings, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
 
+  /* HTML এডিটরে কার্সরের শেষ অবস্থান — মিডিয়া-পিকার/স্নিপেট ওই জায়গায় বসে */
+  const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const htmlCursorRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    htmlCursorRef.current = null;
+  }, [section.id]);
+
+  const insertHtml = (snippet: string) => {
+    if (readOnly) return;
+    const current = str("html");
+    const position = htmlCursorRef.current;
+    let next: string;
+    let caret: number;
+    if (position !== null && position >= 0 && position <= current.length) {
+      const before = current.slice(0, position);
+      const after = current.slice(position);
+      const prefix = before && !before.endsWith("\n") ? "\n" : "";
+      const suffix = after && !after.startsWith("\n") ? "\n" : "";
+      next = `${before}${prefix}${snippet}${suffix}${after}`;
+      caret = position + prefix.length + snippet.length;
+    } else {
+      next = current ? `${current}\n\n${snippet}` : snippet;
+      caret = next.length;
+    }
+    set("html", next);
+    window.requestAnimationFrame(() => {
+      const element = htmlTextareaRef.current;
+      if (element) {
+        element.focus();
+        element.setSelectionRange(caret, caret);
+        htmlCursorRef.current = caret;
+      }
+    });
+  };
+
   useEffect(() => {
     if (!advancedOpen) {
       setRawJson(JSON.stringify(section.settings, null, 2));
@@ -620,7 +659,7 @@ export function LandingSectionEditor({
                   type="button"
                   className="chip"
                   disabled={readOnly}
-                  onClick={() => set("html", `${str("html")}${str("html") ? "\n\n" : ""}${snippet.html}`)}
+                  onClick={() => insertHtml(snippet.html)}
                 >
                   <Plus aria-hidden="true" />
                   {snippet.label}
@@ -628,16 +667,30 @@ export function LandingSectionEditor({
               ))}
             </div>
           </div>
+          <MediaPicker
+            disabled={readOnly}
+            autoInsertOnUpload
+            onInsertHtml={insertHtml}
+          />
           <textarea
+            ref={htmlTextareaRef}
             className="input mono lp-code-editor"
             rows={12}
             value={str("html")}
             disabled={readOnly}
             spellCheck={false}
-            onChange={(event) => set("html", event.target.value)}
+            onChange={(event) => {
+              htmlCursorRef.current = event.target.selectionStart;
+              set("html", event.target.value);
+            }}
+            onSelect={(event) => {
+              htmlCursorRef.current = event.currentTarget.selectionStart;
+            }}
           />
           <span className="help-text">
             Script, iframe, form ও event handler স্বয়ংক্রিয়ভাবে বাদ যায়। Inline CSS অনুমোদিত।
+            ছবি বসাতে উপরের &quot;ছবি যোগ করুন (R2/Media)&quot; প্যানেল থেকে আপলোড করুন বা আগের
+            আপলোড করা ছবির লিংক/HTML কপি করুন — Storage (R2) পেজ থেকেও একইভাবে লিংক কপি করা যায়।
           </span>
           {str("html").trim() ? (
             <div className="lp-html-preview">

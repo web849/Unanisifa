@@ -61,7 +61,7 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 | --- | --- |
 | `npm run dev` / `build` / `start` | ডেভ সার্ভার / প্রোডাকশন বিল্ড / সার্ভ |
 | `npm run qa` | typecheck + lint + test + build (একসাথে) |
-| `npm test` | ৫৮টি ইউনিট টেস্ট (pricing, coupons, fraud, status, validation, mystery, utils, emoji-scan) |
+| `npm test` | ১২৬টি ইউনিট টেস্ট (pricing, coupons, fraud, status, validation, mystery, utils, media-snippet, emoji-scan) |
 | `npm run db:generate` | স্কিমা বদলালে drizzle-kit দিয়ে নতুন মাইগ্রেশন |
 | `npm run db:migrate` | কমিট করা SQL মাইগ্রেশন প্রয়োগ |
 | `npm run db:seed` / `db:seed-catalog` | সেটিংস+কুপন / ডেমো পণ্য-ক্যাটাগরি-ব্যানার-CMS |
@@ -90,6 +90,25 @@ npm run db:bootstrap-admin   # owner অ্যাকাউন্ট (ADMIN_EMAIL
 5. Integrations → Meta Pixel ID + CAPI token দিলে ViewContent/Lead/AddToCart/InitiateCheckout/Purchase ইভেন্ট চলবে (purchase trigger: confirmed/delivered বেছে নেওয়া যায়)।
 6. ফেসবুক অ্যাডে `/offer/[slug]` লিংক দিন। অর্ডার পড়লে Dashboard-এ ফ্রড-স্ট্যাটাসসহ দেখা যাবে।
 7. Couriers → Steadfast বা Pathao-র API কী বসিয়ে কানেক্ট করুন (নিচের সেকশন দেখুন)।
+
+## ল্যান্ডিং পেজ তৈরি ও R2 ছবি দিয়ে HTML সাজানো
+
+**ল্যান্ডিং পেজ তৈরি না হলে (আগে যেসব কারণে আটকাত — সব ঠিক করা হয়েছে):**
+
+- **নিজের পণ্য তালিকায় না পাওয়া**: নতুন পণ্য ডিফল্টে Draft থাকে; তৈরির ফর্ম আগে শুধু Active পণ্য দেখাত। এখন Draft পণ্যও দেখায়, তবে অর্ডার নেওয়ার আগে পণ্যটি Active করতে হবে।
+- **একই নামের slug**: আগে `Slug already used` 409 এররে তৈরি আটকে যেত। এখন নতুন পেজে স্বয়ংক্রিয়ভাবে `-2`, `-3` যোগ হয়ে ইউনিক URL হয়।
+- **ডেমো পণ্য বেছে নিলে সার্ভার 500**: ডেমো-আইডি সরাসরি ডেটাবেজে INSERT করতে গিয়ে foreign key এরর হতো, ফ্রন্টএন্ডে দেখাত শুধু "Network error"। এখন সার্ভার আইডি যাচাই করে (slug দিয়ে আসল আইডিতে ম্যাপ করে), না মিললে স্পষ্ট বাংলা কারণ দেখায়।
+- **"Creating…" আটকে থাকা**: ডেমো ইমপোর্ট ব্যর্থ হলে বোতাম চিরকাল আটকে থাকত। এখন আসল এরর দেখায় এবং বোতাম আবার সক্রিয় হয়।
+- তৈরি/সেভ ব্যর্থ হলে এখন কোন ফিল্ডে সমস্যা তা-সহ বার্তা আসে — শুধু "Invalid landing page data" নয়।
+
+**R2-তে ছবি আপলোড করে লিংক/HTML কোড কপি করা:**
+
+1. Admin → **Storage (R2)**-এ ছবি আপলোড করুন (টেনে এনে ছেড়েও হবে; folder: `media`)। R2 কানেক্ট থাকলে ছবি Cloudflare R2-তে ওঠে, না থাকলে ডেটাবেজে থাকে এবং `/api/media/…` থেকে সার্ভ হয় — লিংক দুই ক্ষেত্রেই কাজ করে।
+2. আপলোডের পর প্রতিটি ছবির কার্ডে **"লিংক কপি"** (পূর্ণ URL) ও **"HTML কপি"** (পুরো `<img>` কোড) বোতাম আছে। `R2_PUBLIC_BASE_URL` (বা ভল্টে `r2_public_base_url`) সেট থাকলে লিংক সরাসরি R2/CDN ডোমেইনের হয়; না থাকলে এই সাইটের ঠিকানাসহ পূর্ণ লিংক কপি হয়।
+3. Landing Pages → Builder → **HTML Code** ব্লকে HTML কোড পেস্ট করে inline style দিয়ে নিজের মতো সাজান। HTML ব্লকের ভেতরেই **"ছবি যোগ করুন (R2/Media)"** প্যানেল আছে — সেখান থেকে ছবি আপলোড করলে কার্সরের জায়গায় সরাসরি `<img>` বসে যায়, আগের আপলোড করা ছবি থেকেও বসানো/লিংক কপি করা যায়।
+4. HTML স্যানিটাইজার script/iframe/form/event-handler বাদ দেয়, কিন্তু `<img>`, লেআউট ট্যাগ ও inline CSS পুরোপুরি অনুমোদিত — তাই কপি করা `<img>` কোড নিরাপদে কাজ করে।
+
+মিডিয়া তালিকার API: `GET /api/admin/storage?folder=media&q=নাম&limit=60` (অ্যাডমিন লগইন প্রয়োজন)।
 
 ## কুরিয়ার API ও অটোমেশন
 
@@ -127,7 +146,7 @@ lib/            config, utils, db (schema ৩৫ টেবিল), orders (prici
                 integrations (secrets/notifications/meta/r2), security, cms, demo
 drizzle/        কমিট করা SQL মাইগ্রেশন
 scripts/        migrate, seed, seed-catalog, bootstrap-admin, cleanup-demo, brand/demo assets
-tests/unit/     ৫৮টি ইউনিট টেস্ট (node --test)
+tests/unit/     ১২৬টি ইউনিট টেস্ট (node --test)
 public/brand/   লোগো/মার্ক/আইকন/OG (SVG+PNG)
 ```
 
