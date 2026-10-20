@@ -6,8 +6,9 @@ test("without a database the builder gets the demo catalog, public pages do not"
   const demo = await getLandingCatalog({ demoFallback: true });
   assert.equal(demo.demoFallback, true);
   assert.equal(demo.databaseCount, 0);
-  assert.equal(demo.items.length, 15);
+  assert.equal(demo.items.length, 16);
   assert.ok(demo.items.every((product) => product.isDemo));
+  assert.ok(demo.items.some((product) => product.slug === "safajin-safa-ambari" && product.price === 1000));
 
   const publicCatalog = await getLandingCatalog();
   assert.equal(publicCatalog.demoFallback, false);
