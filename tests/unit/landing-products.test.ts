@@ -8,7 +8,14 @@ test("without a database the builder gets the demo catalog, public pages do not"
   assert.equal(demo.databaseCount, 0);
   assert.equal(demo.items.length, 16);
   assert.ok(demo.items.every((product) => product.isDemo));
-  assert.ok(demo.items.some((product) => product.slug === "safajin-safa-ambari" && product.price === 1000));
+  const safajin = demo.items.find((product) => product.slug === "safajin-safa-ambari");
+  assert.ok(safajin);
+  assert.equal(safajin.name, "Safajin + Safa Ambari");
+  assert.equal(safajin.price, 1000);
+  assert.equal(
+    safajin.image,
+    "https://prakritirshifa.com/wp-content/uploads/2026/04/ChatGPT-Image-Apr-20-2026-01_35_29-AM-683x1024.png",
+  );
 
   const publicCatalog = await getLandingCatalog();
   assert.equal(publicCatalog.demoFallback, false);

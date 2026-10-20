@@ -7,6 +7,8 @@ import { getLandingCatalog, toLandingOrderProduct } from "@/lib/landing/products
 import { getBrand, getCommerce } from "@/lib/store/repository";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "সাফাজিন + সাফা আম্বারি | ইউনানী সিফা",
   description: "সাফাজিন সিরাপ ও সাফা আম্বারি ক্যাপসুল — সহজ অর্ডার, ক্যাশ অন ডেলিভারি।",
