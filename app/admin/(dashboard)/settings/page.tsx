@@ -14,6 +14,8 @@ export default async function AdminSettingsPage() {
 
   let brand: BrandSettings = DEFAULT_SETTINGS.brand;
   let commerce: CommerceSettings = DEFAULT_SETTINGS.commerce;
+  // পপআপ মাস্টার সুইচ ডিফল্ট বন্ধ — Settings থেকে চালু না করলে কাস্টমার সাইটে পপআপ আসে না
+  let popupsEnabled = false;
   let mysteryEnabled = true;
 
   if (isDatabaseConfigured) {
@@ -23,6 +25,7 @@ export default async function AdminSettingsPage() {
       const value = row.value as Record<string, unknown>;
       if (row.key === "brand") brand = { ...brand, ...(value as Partial<BrandSettings>) };
       if (row.key === "commerce") commerce = { ...commerce, ...(value as Partial<CommerceSettings>) };
+      if (row.key === "popup" && typeof value.popupsEnabled === "boolean") popupsEnabled = value.popupsEnabled;
       if (row.key === "popup" && typeof value.mysteryEnabled === "boolean") mysteryEnabled = value.mysteryEnabled;
     }
   }
@@ -32,7 +35,7 @@ export default async function AdminSettingsPage() {
       {!isDatabaseConfigured ? (
         <div className="pending-note">Pending — database not configured; settings cannot be saved.</div>
       ) : (
-        <SettingsManager brand={brand} commerce={commerce} mysteryEnabled={mysteryEnabled} />
+        <SettingsManager brand={brand} commerce={commerce} popupsEnabled={popupsEnabled} mysteryEnabled={mysteryEnabled} />
       )}
     </AdminShell>
   );

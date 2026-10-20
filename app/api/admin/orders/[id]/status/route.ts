@@ -3,6 +3,7 @@ import { guardMutation, jsonError, jsonOk, readJson, requestContext } from "@/li
 import { getAdminSession } from "@/lib/auth/session";
 import { requireAdminWrite } from "@/lib/admin/guard";
 import { changeOrderStatus } from "@/lib/orders/service";
+import { maybeAutoBook } from "@/lib/couriers/service";
 import { ORDER_STATUSES } from "@/lib/orders/status";
 import { audit } from "@/lib/auth/audit";
 
@@ -53,5 +54,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     meta: { note: parsed.data.note ?? null },
   }).catch(() => undefined);
 
-  return jsonOk({ orderId, status: parsed.data.status });
+  /* কুরিয়ার অটোমেশন: shipped হলেই default কুরিয়ারে অটো-বুকিং
+     (ব্যর্থ হলে শিপমেন্টে lastError থাকে — স্ট্যাটাস পরিবর্তন আটকায় না) */
+  const courier =
+    parsed.data.status === "shipped"
+      ? await maybeAutoBook(orderId).catch(() => null)
+      : null;
+
+  return jsonOk({ orderId, status: parsed.data.status, courier });
 }

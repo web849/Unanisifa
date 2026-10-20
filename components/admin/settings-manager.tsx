@@ -9,15 +9,18 @@ import { ImageField } from "@/components/admin/image-field";
 export function SettingsManager({
   brand,
   commerce,
+  popupsEnabled,
   mysteryEnabled,
 }: {
   brand: BrandSettings;
   commerce: CommerceSettings;
+  popupsEnabled: boolean;
   mysteryEnabled: boolean;
 }) {
   const router = useRouter();
   const [brandDraft, setBrandDraft] = useState<BrandSettings>(brand);
   const [commerceDraft, setCommerceDraft] = useState<CommerceSettings>(commerce);
+  const [popups, setPopups] = useState(popupsEnabled);
   const [mystery, setMystery] = useState(mysteryEnabled);
   const [message, setMessage] = useState<{ tone: "ok" | "err"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,13 +61,13 @@ export function SettingsManager({
     setBusy(false);
   };
 
-  const saveMystery = async () => {
+  const savePopups = async () => {
     setBusy(true);
     setMessage(null);
     const response = await fetch("/api/admin/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ popup: { mysteryEnabled: mystery } }),
+      body: JSON.stringify({ popup: { popupsEnabled: popups, mysteryEnabled: mystery } }),
     });
     const json = (await response.json()) as { ok?: boolean; error?: string };
     if (response.ok && json.ok) {
@@ -248,14 +251,23 @@ export function SettingsManager({
       <div className="panel">
         <div className="panel-head">
           <h2 className="panel-title">Popup behaviour</h2>
-          <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => void saveMystery()}>
+          <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => void savePopups()}>
             <Save aria-hidden="true" />
             Save popups
           </button>
         </div>
         <div className="panel-body">
           <label className="field-check">
-            <input type="checkbox" checked={mystery} onChange={(e) => setMystery(e.target.checked)} />
+            <input type="checkbox" checked={popups} onChange={(e) => setPopups(e.target.checked)} />
+            <span>Entry popups enabled — off means no popup appears when customers enter the site</span>
+          </label>
+          <label className="field-check">
+            <input
+              type="checkbox"
+              checked={mystery}
+              disabled={!popups}
+              onChange={(e) => setMystery(e.target.checked)}
+            />
             <span>Mystery offer popup enabled (takes priority over campaign popups)</span>
           </label>
         </div>
