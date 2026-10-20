@@ -79,8 +79,8 @@ export async function getLandingCatalog(options: {
       status: sql<"active" | "draft" | "archived">`${products.status}`,
       image: sql<string | null>`(
         SELECT pi.url FROM product_images pi
-        WHERE pi.product_id = ${products.id}
-        ORDER BY pi.sort_order ASC, pi.id ASC
+        WHERE pi.product_id = "products"."id"
+        ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
         LIMIT 1
       )`,
     })
@@ -140,8 +140,8 @@ export async function getLandingProductById(id: number): Promise<LandingProduct 
       status: sql<"active" | "draft" | "archived">`${products.status}`,
       image: sql<string | null>`(
         SELECT pi.url FROM product_images pi
-        WHERE pi.product_id = ${products.id}
-        ORDER BY pi.sort_order ASC, pi.id ASC
+        WHERE pi.product_id = "products"."id"
+        ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
         LIMIT 1
       )`,
     })
