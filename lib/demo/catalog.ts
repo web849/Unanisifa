@@ -379,6 +379,25 @@ export const DEMO_PRODUCTS: ProductSeed[] = [
     storage: "ঠান্ডা ও শুকনো জায়গায় রাখুন।",
     packageSize: "২০০ মিলি",
   }),
+  mkProduct({
+    id: 16,
+    name: "Safajin + Safa Ambari",
+    slug: "safajin-safa-ambari",
+    categoryId: 2,
+    price: 1000,
+    compareAtPrice: null,
+    stock: 100,
+    trackStock: false,
+    featured: true,
+    shortDescription: "সাফাজিন সিরাপ ও সাফা আম্বারি ক্যাপসুলের একটি সেট।",
+    description: "সাফাজিন সিরাপ ও সাফা আম্বারি ক্যাপসুলের সমন্বিত প্যাক। উপাদান, ব্যবহারবিধি ও সতর্কতা প্যাকেটের লেবেল দেখে নিশ্চিত করুন।",
+    ingredients: "প্যাকেটের লেবেল দেখুন।",
+    dosage: "প্যাকেটের লেবেল এবং যোগ্য চিকিৎসকের পরামর্শ অনুসরণ করুন।",
+    warnings: "যৌন সক্ষমতা বা দৈহিক পরিবর্তনের ফল নিশ্চিত নয়। ব্যবহারের আগে উপাদান যাচাই করুন এবং চিকিৎসকের পরামর্শ নিন, বিশেষত চলমান রোগ বা ওষুধ থাকলে।",
+    storage: "প্যাকেটের নির্দেশনা অনুযায়ী সংরক্ষণ করুন।",
+    packageSize: "১ সেট",
+    manufacturer: "প্যাকেটের লেবেল দেখুন",
+  }),
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -386,7 +405,9 @@ export const DEMO_PRODUCTS: ProductSeed[] = [
 /* -------------------------------------------------------------------------- */
 
 export function demoProductImages(productId: number, productName: string) {
-  const primary = IMG(`p-${String(productId).padStart(2, "0")}`);
+  const primary = productId === 16
+    ? "https://prakritirshifa.com/wp-content/uploads/2026/04/ChatGPT-Image-Apr-20-2026-01_35_29-AM-683x1024.png"
+    : IMG(`p-${String(productId).padStart(2, "0")}`);
   return [
     { productId, url: primary, alt: productName, sortOrder: 0, isPrimary: true },
   ];

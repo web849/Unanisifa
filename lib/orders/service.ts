@@ -271,12 +271,18 @@ export async function createOrder(input: CreateOrderInput): Promise<CreateOrderR
       }
 
       /* ---- ৬) প্রাইসিং (সার্ভারে) ---- */
+      const isSafajinOffer =
+        input.landingSlug === "safajin" &&
+        lines.length === 1 &&
+        productMap.get(lines[0]!.productId)?.slug === "safajin-safa-ambari";
       const pricing = computePricing({
         lines: lines.map((line) => ({ unitPrice: line.unitPrice, quantity: line.quantity })),
         coupon: couponRow,
         couponDiscount,
         area: input.area,
-        commerce: input.commerce,
+        commerce: isSafajinOffer
+          ? { ...input.commerce, freeDeliveryThreshold: 1 }
+          : input.commerce,
         advance: input.commerce.defaultAdvance,
       });
 
