@@ -4,18 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save } from "lucide-react";
 import type { BrandSettings, CommerceSettings } from "@/lib/config";
-import { ImageField } from "@/components/admin/image-field";
+import { LogoBrandingPanel, type BrandMediaItem } from "@/components/admin/logo-branding-panel";
 
 export function SettingsManager({
   brand,
   commerce,
   popupsEnabled,
   mysteryEnabled,
+  recentMedia = [],
 }: {
   brand: BrandSettings;
   commerce: CommerceSettings;
   popupsEnabled: boolean;
   mysteryEnabled: boolean;
+  recentMedia?: BrandMediaItem[];
 }) {
   const router = useRouter();
   const [brandDraft, setBrandDraft] = useState<BrandSettings>(brand);
@@ -35,7 +37,7 @@ export function SettingsManager({
     });
     const json = (await response.json()) as { ok?: boolean; error?: string };
     if (response.ok && json.ok) {
-      setMessage({ tone: "ok", text: "Brand settings saved" });
+      setMessage({ tone: "ok", text: "Brand details saved" });
       router.refresh();
     } else {
       setMessage({ tone: "err", text: json.error ?? "Save failed" });
@@ -86,11 +88,17 @@ export function SettingsManager({
 
   return (
     <div className="stack stack-md">
+      <LogoBrandingPanel
+        brand={brandDraft}
+        recentMedia={recentMedia}
+        onBrandUpdated={(patch) => setBrandDraft((prev) => ({ ...prev, ...patch }))}
+      />
+
       {message ? <p className={message.tone === "ok" ? "ok-text" : "error-text"}>{message.text}</p> : null}
 
       <div className="panel">
         <div className="panel-head">
-          <h2 className="panel-title">Brand</h2>
+          <h2 className="panel-title">Brand Details &amp; Contact</h2>
           <button type="button" className="btn btn-primary btn-sm" disabled={busy} onClick={() => void saveBrand()}>
             <Save aria-hidden="true" />
             Save brand
@@ -149,22 +157,6 @@ export function SettingsManager({
             <span className="label">Site URL</span>
             <input className="input mono" value={brandDraft.siteUrl} onChange={(e) => b("siteUrl", e.target.value)} />
           </label>
-          <ImageField
-            label="Logo (empty = built-in)"
-            value={brandDraft.logoUrl}
-            onChange={(url) => b("logoUrl", url)}
-            folder="brand"
-            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
-            alt="logo"
-          />
-          <ImageField
-            label="Logo light (empty = built-in)"
-            value={brandDraft.logoLightUrl}
-            onChange={(url) => b("logoLightUrl", url)}
-            folder="brand"
-            hint="ছবি তুলুন অথবা URL পেস্ট করুন"
-            alt="logo light"
-          />
           <label className="field">
             <span className="label">Drug license number (empty shows “Pending”)</span>
             <input className="input mono" value={brandDraft.drugLicense} onChange={(e) => b("drugLicense", e.target.value)} />

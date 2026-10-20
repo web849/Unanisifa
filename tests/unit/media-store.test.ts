@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 import {
   MEDIA_FOLDERS,
   buildObjectKey,
+  resolveMediaMimeType,
+  sanitizeSvgBuffer,
   testR2Connection,
   validateMediaInput,
   type R2Config,
@@ -28,19 +30,40 @@ test("media folders cover every admin upload surface", () => {
   }
 });
 
-test("validateMediaInput accepts image types and returns the extension", () => {
+test("validateMediaInput accepts image types (including small SVG/ICO logos) and returns the extension", () => {
   assert.equal(validateMediaInput("image/jpeg", 2048), "jpg");
   assert.equal(validateMediaInput("image/png", 2048), "png");
   assert.equal(validateMediaInput("image/webp", 2048), "webp");
   assert.equal(validateMediaInput("image/avif", 2048), "avif");
-  assert.equal(validateMediaInput("image/svg+xml", 2048), "svg");
+  assert.equal(validateMediaInput("image/svg+xml", 420), "svg");
+  assert.equal(validateMediaInput("image/x-icon", 318), "ico");
+  assert.equal(validateMediaInput("image/vnd.microsoft.icon", 318), "ico");
 });
 
 test("validateMediaInput rejects bad types and out-of-range sizes", () => {
   assert.throws(() => validateMediaInput("application/pdf", 2048), /Unsupported file type/);
   assert.throws(() => validateMediaInput("", 2048), /Unsupported file type/);
-  assert.throws(() => validateMediaInput("image/png", 512), /too small/);
+  assert.throws(() => validateMediaInput("image/png", 32), /too small/);
   assert.throws(() => validateMediaInput("image/png", 6 * 1024 * 1024), /too large/);
+});
+
+test("resolveMediaMimeType infers logo/favicon MIME when browser leaves file.type empty", () => {
+  assert.equal(resolveMediaMimeType("", "logo.svg"), "image/svg+xml");
+  assert.equal(resolveMediaMimeType("application/octet-stream", "favicon.ICO"), "image/x-icon");
+  assert.equal(resolveMediaMimeType("", "brand-mark.PNG"), "image/png");
+  assert.equal(resolveMediaMimeType("image/webp", "logo.png"), "image/webp");
+});
+
+test("sanitizeSvgBuffer removes scripts and inline event handlers from uploaded SVGs", () => {
+  const dirty = Buffer.from(
+    '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>evil()</script><a href="javascript:alert(2)"><path d="M0 0h10v10z"/></a></svg>',
+    "utf8",
+  );
+  const clean = sanitizeSvgBuffer(dirty).toString("utf8");
+  assert.doesNotMatch(clean, /<script/i);
+  assert.doesNotMatch(clean, /onload/i);
+  assert.doesNotMatch(clean, /javascript:/i);
+  assert.match(clean, /<path d="M0 0h10v10z"\/>/);
 });
 
 test("buildObjectKey sanitizes filenames and keeps the folder prefix", () => {

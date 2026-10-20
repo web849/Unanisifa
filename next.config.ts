@@ -24,6 +24,23 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    const isVercel = Boolean(process.env.VERCEL);
+    const cspDirectives = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data:",
+      "media-src 'self' https: blob:",
+      "connect-src 'self' https://www.facebook.com https://*.facebook.com https://*.fb.com https://*.google-analytics.com",
+      "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
+      ...(isVercel ? ["frame-ancestors 'self'"] : []),
+      "form-action 'self'",
+      "object-src 'none'",
+      ...(isVercel ? ["upgrade-insecure-requests"] : []),
+    ];
+
     const securityHeaders = [
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -32,24 +49,10 @@ const nextConfig: NextConfig = {
         value: "camera=(), microphone=(), geolocation=(self), browsing-topics=()",
       },
       { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-      { key: "X-Frame-Options", value: "SAMEORIGIN" },
+      ...(isVercel ? [{ key: "X-Frame-Options", value: "SAMEORIGIN" }] : []),
       {
         key: "Content-Security-Policy",
-        value: [
-          "default-src 'self'",
-          "base-uri 'self'",
-          "script-src 'self' 'unsafe-inline'",
-          "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: blob: https:",
-          "font-src 'self' data:",
-          "media-src 'self' https: blob:",
-          "connect-src 'self' https://www.facebook.com https://*.facebook.com https://*.fb.com https://*.google-analytics.com",
-          "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
-          "frame-ancestors 'self'",
-          "form-action 'self'",
-          "object-src 'none'",
-          "upgrade-insecure-requests",
-        ].join("; "),
+        value: cspDirectives.join("; "),
       },
     ];
 
@@ -112,10 +115,21 @@ const nextConfig: NextConfig = {
       },
       { source: "/admin", headers: noStore },
       { source: "/admin/:path*", headers: noStore },
-      { source: "/api/:path*", headers: noStore },
+      { source: "/api/((?!media/).*)", headers: noStore },
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/api/media/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          {
+            key: "Content-Security-Policy",
+            value: "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
+          },
+        ],
       },
     ];
   },

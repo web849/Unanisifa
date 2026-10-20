@@ -100,20 +100,24 @@ function demoSettings(): SiteSettingsShape {
 
 export const getSettings = cache(async (): Promise<SiteSettingsShape> => {
   if (!db) return demoSettings();
-  const rows = await db
-    .select()
-    .from(siteSettings)
-    .where(inArray(siteSettings.key, ["brand", "commerce"]));
-  const merged = demoSettings();
-  for (const row of rows) {
-    if (row.key === "brand" && row.value) {
-      merged.brand = { ...merged.brand, ...(row.value as Partial<BrandSettings>) };
+  try {
+    const rows = await db
+      .select()
+      .from(siteSettings)
+      .where(inArray(siteSettings.key, ["brand", "commerce"]));
+    const merged = demoSettings();
+    for (const row of rows) {
+      if (row.key === "brand" && row.value) {
+        merged.brand = { ...merged.brand, ...(row.value as Partial<BrandSettings>) };
+      }
+      if (row.key === "commerce" && row.value) {
+        merged.commerce = { ...merged.commerce, ...(row.value as Partial<CommerceSettings>) };
+      }
     }
-    if (row.key === "commerce" && row.value) {
-      merged.commerce = { ...merged.commerce, ...(row.value as Partial<CommerceSettings>) };
-    }
+    return merged;
+  } catch {
+    return demoSettings();
   }
-  return merged;
 });
 
 export async function getBrand(): Promise<BrandSettings> {

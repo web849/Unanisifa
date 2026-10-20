@@ -1,3 +1,4 @@
+import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { guardMutation, jsonError, jsonOk, readJson, requestContext } from "@/lib/api/helpers";
@@ -6,6 +7,7 @@ import { requireAdmin, requireAdminWrite } from "@/lib/admin/guard";
 import { requireDb } from "@/lib/db";
 import { siteSettings } from "@/lib/db/schema";
 import { audit } from "@/lib/auth/audit";
+import { LOGO_HEIGHT_DEFAULT, LOGO_HEIGHT_MAX, LOGO_HEIGHT_MIN } from "@/lib/brand-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,10 @@ const brandSchema = z.object({
   primaryColor: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/).default("#0B5D4A"),
   logoUrl: z.string().trim().max(600).default(""),
   logoLightUrl: z.string().trim().max(600).default(""),
+  faviconUrl: z.string().trim().max(600).default(""),
+  logoHeight: z.number().int().min(LOGO_HEIGHT_MIN).max(LOGO_HEIGHT_MAX).default(LOGO_HEIGHT_DEFAULT),
+  logoShowText: z.boolean().default(false),
+  darkLogoMode: z.enum(["auto", "pill", "white"]).default("auto"),
   drugLicense: z.string().trim().max(120).default(""),
 });
 
@@ -124,6 +130,8 @@ export async function PATCH(request: Request) {
   }
 
   if (updated.length === 0) return jsonError(400, "Nothing to update");
+
+  revalidatePath("/", "layout");
 
   await audit({
     actorType: "admin",

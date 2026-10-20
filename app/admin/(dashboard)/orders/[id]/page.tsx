@@ -13,6 +13,7 @@ import { eq } from "drizzle-orm";
 import { nextStatuses, ORDER_STATUS_LABEL } from "@/lib/orders/status";
 import { formatDateEn, formatTakaEn } from "@/lib/utils";
 import type { OrderStatusValue } from "@/lib/orders/status";
+import { getBrand } from "@/lib/store/repository";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,8 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   const order = rows[0];
   if (!order) notFound();
 
-  const [items, history, shipmentRows, courierProviderRows] = await Promise.all([
+  const [brand, items, history, shipmentRows, courierProviderRows] = await Promise.all([
+    getBrand(),
     db.select().from(orderItems).where(eq(orderItems.orderId, order.id)),
     db.select().from(orderStatusHistory).where(eq(orderStatusHistory.orderId, order.id)).orderBy(orderStatusHistory.id),
     db
@@ -248,7 +250,22 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       {/* প্রিন্ট-যোগ্য ইনভয়েস (window.print) */}
       <div className="invoice-print">
         <header>
-          <strong>ইউনানী সিফা</strong> — ইনভয়েস {order.orderNumber} · {formatDateEn(order.createdAt)}
+          {brand.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={brand.logoUrl}
+              alt={brand.name}
+              style={{
+                height: 40,
+                width: "auto",
+                maxWidth: 180,
+                objectFit: "contain",
+                verticalAlign: "middle",
+                marginRight: 10,
+              }}
+            />
+          ) : null}
+          <strong>{brand.name}</strong> — ইনভয়েস {order.orderNumber} · {formatDateEn(order.createdAt)}
         </header>
         <table>
           <thead>

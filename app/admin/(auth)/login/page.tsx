@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 import { isDatabaseConfigured } from "@/lib/db";
-import { DEFAULT_BRAND } from "@/lib/config";
+import { getBrand } from "@/lib/store/repository";
 
 export const metadata: Metadata = {
   title: "Admin Login",
@@ -10,15 +10,34 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const brand = await getBrand();
+  const customLogo = (brand.logoUrl || brand.logoLightUrl || "").trim();
+
   return (
     <div className="admin-root admin-login">
       <div className="admin-login-card">
         <div className="text-center mb-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/mark.svg" alt="" width={56} height={56} style={{ margin: "0 auto 12px" }} />
+          {customLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={customLogo}
+              alt={brand.name}
+              style={{
+                height: 52,
+                width: "auto",
+                maxWidth: 220,
+                objectFit: "contain",
+                margin: "0 auto 12px",
+                display: "block",
+              }}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/brand/mark.svg" alt="" width={56} height={56} style={{ margin: "0 auto 12px" }} />
+          )}
           <h1 className="display" style={{ fontSize: "1.5rem" }}>
-            {DEFAULT_BRAND.name}
+            {brand.name}
           </h1>
           <p className="text-muted text-small mb-0">Admin Dashboard</p>
         </div>

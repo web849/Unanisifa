@@ -7,12 +7,15 @@
  */
 
 import Link from "next/link";
+import { Phone } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { LandingOrderForm } from "@/components/landing/landing-order-form";
 import { renderLandingSection } from "@/components/landing/landing-sections";
 import { toLandingOrderProduct, type LandingProduct } from "@/lib/landing/product-types";
 import type { LandingSection } from "@/lib/landing/sections";
 import type { BrandSettings, CommerceSettings } from "@/lib/config";
 import { MEDICAL_DISCLAIMER } from "@/lib/config";
+import { telLink } from "@/lib/contact-links";
 import type { ProductReview } from "@/lib/db/schema";
 
 export type LandingPageContent = {
@@ -60,8 +63,23 @@ export function LandingPageView({
     return mainProduct;
   };
 
+  const logoVariant = page.themeSlug === "midnight" ? "light" : "dark";
+
   return (
     <div className={`lp-root lp-theme-${page.themeSlug}`} data-landing-page={page.id}>
+      <header className="lp-brand-bar">
+        <div className="lp-inner lp-brand-bar-inner">
+          <Link href="/" className="header-brand" aria-label={`${brand.name} — হোম`}>
+            <BrandMark brand={brand} variant={logoVariant} />
+          </Link>
+          {brand.phone ? (
+            <a className="btn btn-outline btn-sm lp-call-btn" href={telLink(brand)}>
+              <Phone aria-hidden="true" />
+              <span>{brand.phone}</span>
+            </a>
+          ) : null}
+        </div>
+      </header>
       <main id="main">
         {visible.map((section) => {
           if (section.type === "order_form") {

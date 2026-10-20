@@ -3,15 +3,16 @@
 import { useRef, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 
-export const IMAGE_ACCEPT = "image/jpeg,image/png,image/webp,image/avif,image/svg+xml";
+export const IMAGE_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/avif,image/svg+xml,image/x-icon,.svg,.ico";
 
 /**
  * একটিমাত্র ছবি আপলোড করে URL ফেরত দেয়।
  * ব্যর্থ হলে বাংলা/ইংরেজি বার্তাসহ Error থ্রো করে।
  */
 export async function uploadImageFile(file: File, folder: string, alt = ""): Promise<string> {
-  if (file.size < 1024 || file.size > 5 * 1024 * 1024) {
-    throw new Error("ছবি 1 KB – 5 MB এর মধ্যে হতে হবে।");
+  if (file.size < 64 || file.size > 5 * 1024 * 1024) {
+    throw new Error("ছবি 64 B – 5 MB এর মধ্যে হতে হবে।");
   }
   const form = new FormData();
   form.set("file", file);
@@ -115,6 +116,7 @@ export function ImageField({
   required = false,
   disabled = false,
   alt = "",
+  fit = "cover",
 }: {
   label: string;
   value: string;
@@ -125,7 +127,9 @@ export function ImageField({
   required?: boolean;
   disabled?: boolean;
   alt?: string;
+  fit?: "cover" | "contain";
 }) {
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -133,12 +137,15 @@ export function ImageField({
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    setBusy(true);
     setError(null);
     try {
       const url = await uploadImageFile(file, folder, alt || label);
       onChange(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "আপলোড ব্যর্থ হয়েছে।");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -150,7 +157,7 @@ export function ImageField({
           className="input mono"
           value={value}
           required={required}
-          disabled={disabled}
+          disabled={disabled || busy}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -161,30 +168,38 @@ export function ImageField({
           className="sr-only"
           aria-hidden="true"
           tabIndex={-1}
-          disabled={disabled}
+          disabled={disabled || busy}
           onChange={(event) => void onFile(event)}
         />
         <button
           type="button"
           className="btn btn-outline btn-sm image-field-upload"
-          disabled={disabled}
+          disabled={disabled || busy}
           onClick={() => {
             setError(null);
             fileRef.current?.click();
           }}
         >
           <ImagePlus aria-hidden="true" />
-          ছবি তুলুন
+          {busy ? "আপলোড হচ্ছে…" : "ছবি তুলুন"}
         </button>
       </div>
       {value ? (
         <div className="image-field-preview">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="" />
+          <img
+            src={value}
+            alt=""
+            style={
+              fit === "contain" || folder === "brand"
+                ? { objectFit: "contain", width: "auto", maxWidth: "180px", padding: "4px 8px" }
+                : undefined
+            }
+          />
           <button
             type="button"
             className="btn btn-ghost btn-sm"
-            disabled={disabled}
+            disabled={disabled || busy}
             onClick={() => onChange("")}
             aria-label="ছবি সরান"
           >

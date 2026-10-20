@@ -23,11 +23,13 @@ export async function createCustomerSession(session: CustomerSession): Promise<v
     .setExpirationTime(`${CUSTOMER_SESSION_TTL_SECONDS}s`)
     .sign(secret());
 
+  const iframePreview = process.env.ALLOW_IFRAME_SESSION === "1";
   const store = await cookies();
   store.set(CUSTOMER_SESSION_COOKIE, token, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: iframePreview ? "none" : "lax",
+    secure: iframePreview || process.env.NODE_ENV === "production",
+    ...(iframePreview ? { partitioned: true } : {}),
     path: "/",
     maxAge: CUSTOMER_SESSION_TTL_SECONDS,
   });

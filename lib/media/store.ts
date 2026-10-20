@@ -14,6 +14,8 @@ import {
   buildObjectKey,
   getR2Config,
   putObject,
+  resolveMediaMimeType,
+  sanitizeSvgBuffer,
   validateMediaInput,
   type MediaFolder,
 } from "../integrations/r2";
@@ -36,22 +38,25 @@ export async function saveUpload(
   body: Buffer,
   mimeType: string,
 ): Promise<StoredUpload> {
+  const normalizedMime = resolveMediaMimeType(mimeType, filename);
+  const safeBody = normalizedMime === "image/svg+xml" ? sanitizeSvgBuffer(body) : body;
+
   const config = await getR2Config();
   if (config) {
-    const result = await putObject(config, folder, filename, body, mimeType);
+    const result = await putObject(config, folder, filename, safeBody, normalizedMime);
     return { ...result, storage: "r2", dataBase64: null };
   }
 
   // R2 নেই — ডেটাবেজ-ব্যাকড স্টোরেজ (একই ভ্যালিডেশন + একই key ফরম্যাট)
-  const extension = validateMediaInput(mimeType, body.length);
+  const extension = validateMediaInput(normalizedMime, safeBody.length);
   const objectKey = buildObjectKey(folder, filename, extension);
   return {
     url: `/api/media/${objectKey}`,
     objectKey,
-    sizeBytes: body.length,
-    mimeType,
+    sizeBytes: safeBody.length,
+    mimeType: normalizedMime,
     storage: "db",
-    dataBase64: body.toString("base64"),
+    dataBase64: safeBody.toString("base64"),
   };
 }
 

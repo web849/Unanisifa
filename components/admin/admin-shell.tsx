@@ -3,7 +3,8 @@ import { Store } from "lucide-react";
 import { AdminShellClient } from "./admin-shell-client";
 import type { AdminNavCounts } from "./admin-nav";
 import type { AdminSession } from "@/lib/auth/session";
-import { DEFAULT_BRAND } from "@/lib/config";
+import { getBrand } from "@/lib/store/repository";
+import { resolveBrandLogo } from "@/lib/brand-logo";
 
 /**
  * অ্যাডমিন শেল — Server Component।
@@ -14,7 +15,7 @@ import { DEFAULT_BRAND } from "@/lib/config";
  * "Functions cannot be passed directly to Client Components" এরর হয়
  * এবং লগইনের পর পুরো অ্যাডমিন পানেল ৫০০ দেয়।
  */
-export function AdminShell({
+export async function AdminShell({
   session,
   counts,
   children,
@@ -27,10 +28,20 @@ export function AdminShell({
   title: string;
   subtitle?: string;
 }) {
+  const brand = await getBrand();
+
   return (
     <div className="admin-root">
       <div className="admin-layout">
-        <AdminShellClient counts={counts} sessionName={session.name} sessionRole={session.role} />
+        <AdminShellClient
+          counts={counts}
+          sessionName={session.name}
+          sessionRole={session.role}
+          brandName={brand.name}
+          brandLogoUrl={brand.logoUrl}
+          brandLogoLightUrl={brand.logoLightUrl}
+          darkLogoMode={brand.darkLogoMode}
+        />
         <div className="admin-main">
           <div className="admin-topbar">
             <div style={{ flex: "1 1 auto" }}>
@@ -49,11 +60,13 @@ export function AdminShell({
   );
 }
 
-export function AdminBrandMark() {
+export async function AdminBrandMark() {
+  const brand = await getBrand();
+  const resolved = resolveBrandLogo(brand, "light");
   return (
     <span className="admin-brand">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/brand/logo-light.svg" alt={DEFAULT_BRAND.name} />
+      <img src={resolved.src} alt={brand.name} />
     </span>
   );
 }
