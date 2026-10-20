@@ -65,6 +65,7 @@ import {
 import type { LandingProduct } from "@/lib/landing/product-types";
 import type { BrandSettings, CommerceSettings } from "@/lib/config";
 import type { ProductReview } from "@/lib/db/schema";
+import { apiErrorMessage } from "@/lib/admin/api-error-message";
 import { formatDateEn, slugify } from "@/lib/utils";
 
 type PageStatus = "draft" | "published" | "archived";
@@ -307,9 +308,9 @@ export function LandingBuilder({
         headers: { "Content-Type": "application/json" },
         body: "{}",
       });
-      const payload = (await response.json()) as { ok?: boolean; error?: string };
-      if (!response.ok || !payload.ok) {
-        setMessage({ tone: "err", text: payload.error ?? "Could not import the demo catalog." });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      if (!response.ok || !payload?.ok) {
+        setMessage({ tone: "err", text: apiErrorMessage(payload, "Could not import the demo catalog.", response.status) });
         setImportState("idle");
         return false;
       }
@@ -370,9 +371,14 @@ export function LandingBuilder({
           thankYouOffers: nextDraft.thankYouOffers,
         }),
       });
-      const json = (await response.json()) as { ok?: boolean; error?: string };
-      if (!response.ok || !json.ok) {
-        setMessage({ tone: "err", text: json.error ?? "Save failed." });
+      const json = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+        fieldErrors?: Record<string, unknown>;
+        formErrors?: unknown;
+      } | null;
+      if (!response.ok || !json?.ok) {
+        setMessage({ tone: "err", text: apiErrorMessage(json, "Save failed.", response.status) });
         return;
       }
       const savedDraft = { ...nextDraft, updatedAt: new Date().toISOString() };
@@ -1004,6 +1010,8 @@ export function LandingBuilder({
                   section={selected}
                   products={products}
                   mainProduct={mainProduct}
+                  brand={brand}
+                  couponCode={draft.couponCode}
                   readOnly={readOnly}
                   onChangeSettings={updateSettings}
                   onReplaceSettings={replaceSettings}

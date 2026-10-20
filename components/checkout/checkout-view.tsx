@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useCart } from "@/components/cart/cart-provider";
+import { parseDirectCheckoutParams } from "@/lib/cart/direct-checkout";
 import { useToast } from "@/components/store/toast";
 import type { PricedCart } from "@/lib/cart/types";
 import { formatTaka, toBanglaDigits } from "@/lib/utils";
@@ -55,7 +56,7 @@ export function CheckoutView({ commerce }: { commerce: CommerceInfo }) {
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
-  const { items, clear } = useCart();
+  const { items, clear, add, ready } = useCart();
 
   const [priced, setPriced] = useState<PricedCart | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,6 +78,23 @@ export function CheckoutView({ commerce }: { commerce: CommerceInfo }) {
       ? crypto.randomUUID()
       : `ik-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
+
+  /* ---- ডাইরেক্ট চেকআউট লিংক (?buy=পণ্য) — ল্যান্ডিং HTML-এর {{checkout_url}} ---- */
+  const directBuyHandled = useRef(false);
+  useEffect(() => {
+    if (!ready || directBuyHandled.current) return;
+    const direct = parseDirectCheckoutParams(params);
+    if (!direct) return;
+    directBuyHandled.current = true;
+    add(direct.productId, direct.quantity, direct.variantId);
+    const next = new URLSearchParams(params.toString());
+    next.delete("buy");
+    next.delete("qty");
+    next.delete("variant");
+    const query = next.toString();
+    router.replace(query ? `/checkout?${query}` : "/checkout", { scroll: false });
+    toast("পণ্যটি কার্টে যোগ হয়েছে — তথ্য দিয়ে অর্ডার নিশ্চিত করুন", "success");
+  }, [ready, params, add, router, toast]);
 
   /* ---- কার্ট প্রাইসিং (সার্ভার) ---- */
   useEffect(() => {

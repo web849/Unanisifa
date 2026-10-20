@@ -56,22 +56,33 @@ export async function POST(request: Request) {
 
   let id: string | null = null;
   const db = requireDb("মিডিয়া");
-  const rows = await db
-    .insert(media)
-    .values({
-      objectKey: result.objectKey,
+  try {
+    const rows = await db
+      .insert(media)
+      .values({
+        objectKey: result.objectKey,
+        url: result.url,
+        mimeType: result.mimeType,
+        sizeBytes: result.sizeBytes,
+        folder: folderRaw,
+        alt,
+        storage: result.storage,
+        dataBase64: result.dataBase64,
+        uploadedBy: session?.userId ?? null,
+      })
+      .onConflictDoNothing()
+      .returning({ id: media.id });
+    id = rows[0]?.id ?? null;
+  } catch (error) {
+    // R2-তে ফাইল উঠে গেলেও রেকর্ড সেভ না হলে লিংকটি জানিয়ে দেওয়া হয়,
+    // যাতে ব্যবহারকারী অন্তত লিংকটি ব্যবহার করতে পারেন।
+    return jsonError(500, "ছবি আপলোড হয়েছে কিন্তু রেকর্ড সেভ করা যায়নি।", {
       url: result.url,
-      mimeType: result.mimeType,
-      sizeBytes: result.sizeBytes,
-      folder: folderRaw,
-      alt,
+      objectKey: result.objectKey,
       storage: result.storage,
-      dataBase64: result.dataBase64,
-      uploadedBy: session?.userId ?? null,
-    })
-    .onConflictDoNothing()
-    .returning({ id: media.id });
-  id = rows[0]?.id ?? null;
+      detail: error instanceof Error ? error.message.slice(0, 200) : "database error",
+    });
+  }
 
   await audit({
     actorType: "admin",
@@ -85,7 +96,15 @@ export async function POST(request: Request) {
   }).catch(() => undefined);
 
   return jsonOk(
-    { id, url: result.url, objectKey: result.objectKey, sizeBytes: result.sizeBytes, storage: result.storage },
+    {
+      id,
+      url: result.url,
+      objectKey: result.objectKey,
+      sizeBytes: result.sizeBytes,
+      storage: result.storage,
+      mimeType: result.mimeType,
+      alt: alt ?? "",
+    },
     201,
   );
 }
