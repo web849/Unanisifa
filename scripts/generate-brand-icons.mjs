@@ -351,13 +351,11 @@ function encodeIco(images) {
 
 const brandDir = path.join(ROOT, "public", "brand");
 mkdirSync(brandDir, { recursive: true });
-mkdirSync(path.join(ROOT, "app"), { recursive: true });
 
 const targets = [
   { file: path.join(brandDir, "icon-192.png"), size: 192 },
   { file: path.join(brandDir, "icon-512.png"), size: 512 },
   { file: path.join(brandDir, "apple-touch-icon.png"), size: 180 },
-  { file: path.join(ROOT, "app", "apple-icon.png"), size: 180 },
 ];
 
 for (const target of targets) {

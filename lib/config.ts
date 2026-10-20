@@ -40,6 +40,14 @@ export type BrandSettings = {
   logoUrl: string;
   /** ডার্ক হেডারের জন্য লোগো ভ্যারিয়েন্ট (খালি = বিল্ট-ইন) */
   logoLightUrl: string;
+  /** ব্রাউজার ট্যাব আইকন / ফেভিকন URL (খালি = বিল্ট-ইন) */
+  faviconUrl: string;
+  /** হেডারে লোগোর উচ্চতা (px: ২৪–৭২, ডিফল্ট ৩৬) */
+  logoHeight: number;
+  /** কাস্টম লোগোর পাশে ব্র্যান্ডের নাম ও ট্যাগলাইন দেখানো হবে কি না */
+  logoShowText: boolean;
+  /** আলাদা লাইট লোগো না থাকলে ডার্ক ব্যাকগ্রাউন্ডে (ফুটার/অ্যাডমিন) প্রদর্শন মোড */
+  darkLogoMode: "auto" | "pill" | "white";
   /** ড্রাগ লাইসেন্স নম্বর — না থাকলে "Pending" দেখাবে, ভুয়া নম্বর কখনো নয় */
   drugLicense: string;
 };
@@ -100,6 +108,10 @@ export const DEFAULT_BRAND: BrandSettings = {
   primaryColor: "#0B5D4A",
   logoUrl: "",
   logoLightUrl: "",
+  faviconUrl: "",
+  logoHeight: 36,
+  logoShowText: false,
+  darkLogoMode: "auto",
   drugLicense: "",
 };
 

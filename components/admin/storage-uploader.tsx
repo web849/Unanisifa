@@ -27,8 +27,8 @@ export function StorageUploader({ folders }: { folders: string[] }) {
     const batch = Array.from(files).slice(0, 10);
     const done: UploadResult[] = [];
     for (const file of batch) {
-      if (file.size < 1024 || file.size > 5 * 1024 * 1024) {
-        done.push({ name: file.name, ok: false, error: "File must be between 1 KB and 5 MB" });
+      if (file.size < 64 || file.size > 5 * 1024 * 1024) {
+        done.push({ name: file.name, ok: false, error: "File must be between 64 B and 5 MB" });
         continue;
       }
       try {

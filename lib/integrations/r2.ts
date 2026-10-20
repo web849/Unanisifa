@@ -58,7 +58,7 @@ export const MEDIA_FOLDERS = ["products", "banners", "categories", "brand", "pop
 export type MediaFolder = (typeof MEDIA_FOLDERS)[number];
 
 export const MEDIA_MAX_BYTES = 5 * 1024 * 1024;
-export const MEDIA_MIN_BYTES = 1 * 1024;
+export const MEDIA_MIN_BYTES = 64;
 
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -66,13 +66,52 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/webp": "webp",
   "image/avif": "avif",
   "image/svg+xml": "svg",
+  "image/x-icon": "ico",
+  "image/vnd.microsoft.icon": "ico",
 };
+
+const EXT_TO_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  avif: "image/avif",
+  svg: "image/svg+xml",
+  ico: "image/x-icon",
+};
+
+/** ব্রাউজার খালি বা generic MIME পাঠালে ফাইলের এক্সটেনশন থেকে MIME নির্ধারণ করে */
+export function resolveMediaMimeType(mimeType: string, filename = ""): string {
+  const clean = (mimeType || "").trim().toLowerCase();
+  if (ALLOWED_TYPES[clean]) return clean;
+  if (!clean || clean === "application/octet-stream") {
+    const ext = filename.split(".").pop()?.trim().toLowerCase() ?? "";
+    if (EXT_TO_MIME[ext]) return EXT_TO_MIME[ext];
+  }
+  return clean;
+}
+
+/** SVG ফাইলে সম্ভাব্য স্ক্রিপ্ট/ইভেন্ট হ্যান্ডলার সরিয়ে নিরাপদ করে */
+export function sanitizeSvgBuffer(body: Buffer): Buffer {
+  const raw = body.toString("utf8");
+  const cleaned = raw
+    .replace(/<script\b[\s\S]*?<\/script>/gi, "")
+    .replace(/<script\b[^>]*\/?>/gi, "")
+    .replace(/<foreignObject\b[\s\S]*?<\/foreignObject>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*')/gi, "");
+  return Buffer.from(cleaned, "utf8");
+}
 
 /** আপলোড ভ্যালিডেশন — R2 ও ডেটাবেজ-স্টোরেজ দুটোতেই একই নিয়ম */
 export function validateMediaInput(mimeType: string, sizeBytes: number): string {
   const extension = ALLOWED_TYPES[mimeType];
-  if (!extension) throw new Error(`Unsupported file type: ${mimeType || "(unknown)"}. Use jpg, png, webp, avif or svg.`);
-  if (sizeBytes < MEDIA_MIN_BYTES) throw new Error("File too small (minimum 1 KB)");
+  if (!extension) {
+    throw new Error(
+      `Unsupported file type: ${mimeType || "(unknown)"}. Use jpg, png, webp, avif, svg or ico.`,
+    );
+  }
+  if (sizeBytes < MEDIA_MIN_BYTES) throw new Error("File too small (minimum 64 bytes)");
   if (sizeBytes > MEDIA_MAX_BYTES) throw new Error("File too large (maximum 5 MB)");
   return extension;
 }

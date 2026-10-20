@@ -6,15 +6,25 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
 import { adminNavGroups, type AdminNavCounts } from "./admin-nav";
 import { DEFAULT_BRAND } from "@/lib/config";
+import { resolveBrandLogo, type DarkLogoMode } from "@/lib/brand-logo";
+import { cx } from "@/lib/utils";
 
 export function AdminShellClient({
   counts,
   sessionName,
   sessionRole,
+  brandName = DEFAULT_BRAND.name,
+  brandLogoUrl = "",
+  brandLogoLightUrl = "",
+  darkLogoMode = "auto",
 }: {
   counts: AdminNavCounts;
   sessionName: string;
   sessionRole: string;
+  brandName?: string;
+  brandLogoUrl?: string;
+  brandLogoLightUrl?: string;
+  darkLogoMode?: DarkLogoMode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -22,6 +32,17 @@ export function AdminShellClient({
   // নেভিগেশন এখানেই তৈরি হয় — Server Component থেকে আইকন (ফাংশন) প্রপ হিসেবে
   // পাঠানো যায় না, তাই ক্লায়েন্টেই কনফিগ থেকে গ্রুপ বানানো হয়।
   const groups = adminNavGroups(counts);
+
+  const resolvedLogo = resolveBrandLogo(
+    {
+      logoUrl: brandLogoUrl,
+      logoLightUrl: brandLogoLightUrl,
+      logoHeight: 34,
+      logoShowText: false,
+      darkLogoMode,
+    },
+    "light",
+  );
 
   useEffect(() => {
     setOpen(false);
@@ -50,12 +71,31 @@ export function AdminShellClient({
 
       <aside className="admin-sidebar" data-open={open} aria-label="Admin navigation">
         <Link href="/admin" className="admin-brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/mark.svg" alt="" width={34} height={34} />
-          <span>
-            <span className="admin-brand-name">{DEFAULT_BRAND.name}</span>
-            <span className="admin-brand-sub">Admin</span>
-          </span>
+          {resolvedLogo.isCustom ? (
+            <>
+              <span className={cx(resolvedLogo.darkTreatment === "pill" && "brand-logo-pill")}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolvedLogo.src}
+                  alt={brandName}
+                  className={cx(
+                    "admin-brand-custom-img",
+                    resolvedLogo.darkTreatment === "white" && "brand-logo-img-white",
+                  )}
+                />
+              </span>
+              <span className="admin-brand-sub">Admin</span>
+            </>
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/mark.svg" alt="" width={34} height={34} />
+              <span>
+                <span className="admin-brand-name">{brandName}</span>
+                <span className="admin-brand-sub">Admin</span>
+              </span>
+            </>
+          )}
         </Link>
 
         {groups.map((group) => (

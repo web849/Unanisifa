@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const file = form.get("file");
   if (!(file instanceof File)) return jsonError(400, "Missing file");
   if (file.size < MEDIA_MIN_BYTES || file.size > MEDIA_MAX_BYTES) {
-    return jsonError(400, "File must be between 1 KB and 5 MB");
+    return jsonError(400, "File must be between 64 bytes and 5 MB");
   }
 
   const folderRaw = String(form.get("folder") ?? "products");

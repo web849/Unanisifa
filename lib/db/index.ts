@@ -7,11 +7,17 @@
  *  - কখনো ভুয়া সাকসেস দেখায় না
  */
 
-import { Pool } from "@neondatabase/serverless";
+import { neonConfig, Pool } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-serverless";
 import * as schema from "./schema";
 
 export * as schema from "./schema";
+
+if (process.env.NEON_WS_PROXY) {
+  neonConfig.wsProxy = () => process.env.NEON_WS_PROXY as string;
+  neonConfig.useSecureWebSocket = false;
+  neonConfig.pipelineConnect = false;
+}
 
 const DATABASE_URL = process.env.DATABASE_URL ?? "";
 

@@ -42,11 +42,13 @@ export async function createAdminSession(user: AdminUser): Promise<void> {
     .setExpirationTime(`${ADMIN_SESSION_TTL_SECONDS}s`)
     .sign(secret());
 
+  const iframePreview = process.env.ALLOW_IFRAME_SESSION === "1";
   const store = await cookies();
   store.set(ADMIN_SESSION_COOKIE, token, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: iframePreview ? "none" : "lax",
+    secure: iframePreview || process.env.NODE_ENV === "production",
+    ...(iframePreview ? { partitioned: true } : {}),
     path: "/",
     maxAge: ADMIN_SESSION_TTL_SECONDS,
   });

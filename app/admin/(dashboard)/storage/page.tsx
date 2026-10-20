@@ -52,7 +52,7 @@ export default async function AdminStoragePage() {
       session={session}
       counts={{}}
       title="Storage"
-      subtitle={`Uploads 1 KB – 5 MB · folders: ${MEDIA_FOLDERS.join(", ")}`}
+      subtitle={`Uploads up to 5 MB · folders: ${MEDIA_FOLDERS.join(", ")}`}
     >
       {r2 ? (
         <div className="pending-note mb-4">

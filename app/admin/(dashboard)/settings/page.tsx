@@ -1,8 +1,10 @@
+import { eq, sql } from "drizzle-orm";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { SettingsManager } from "@/components/admin/settings-manager";
+import type { BrandMediaItem } from "@/components/admin/logo-branding-panel";
 import { getAdminSession } from "@/lib/auth/session";
 import { isDatabaseConfigured, requireDb } from "@/lib/db";
-import { siteSettings } from "@/lib/db/schema";
+import { media, siteSettings } from "@/lib/db/schema";
 import { DEFAULT_SETTINGS } from "@/lib/config";
 import type { BrandSettings, CommerceSettings } from "@/lib/config";
 
@@ -17,10 +19,25 @@ export default async function AdminSettingsPage() {
   // পপআপ মাস্টার সুইচ ডিফল্ট বন্ধ — Settings থেকে চালু না করলে কাস্টমার সাইটে পপআপ আসে না
   let popupsEnabled = false;
   let mysteryEnabled = true;
+  let recentMedia: BrandMediaItem[] = [];
 
   if (isDatabaseConfigured) {
     const db = requireDb("সেটিংস");
-    const rows = await db.select().from(siteSettings);
+    const [rows, mediaRows] = await Promise.all([
+      db.select().from(siteSettings),
+      db
+        .select({
+          id: media.id,
+          url: media.url,
+          mimeType: media.mimeType,
+          alt: media.alt,
+        })
+        .from(media)
+        .where(eq(media.folder, "brand"))
+        .orderBy(sql`${media.createdAt} DESC`)
+        .limit(12),
+    ]);
+    recentMedia = mediaRows;
     for (const row of rows) {
       const value = row.value as Record<string, unknown>;
       if (row.key === "brand") brand = { ...brand, ...(value as Partial<BrandSettings>) };
@@ -31,12 +48,17 @@ export default async function AdminSettingsPage() {
   }
 
   return (
-    <AdminShell session={session} counts={{}} title="Settings" subtitle="Brand, commerce and popup behaviour">
+    <AdminShell session={session} counts={{}} title="Settings" subtitle="Logo, brand identity, commerce and popup behaviour">
       {!isDatabaseConfigured ? (
-        <div className="pending-note">Pending — database not configured; settings cannot be saved.</div>
-      ) : (
-        <SettingsManager brand={brand} commerce={commerce} popupsEnabled={popupsEnabled} mysteryEnabled={mysteryEnabled} />
-      )}
+        <div className="pending-note mb-4">Pending — database not configured; settings cannot be saved.</div>
+      ) : null}
+      <SettingsManager
+        brand={brand}
+        commerce={commerce}
+        popupsEnabled={popupsEnabled}
+        mysteryEnabled={mysteryEnabled}
+        recentMedia={recentMedia}
+      />
     </AdminShell>
   );
 }

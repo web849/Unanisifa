@@ -39,6 +39,7 @@ export async function GET(_request: Request, context: { params: Promise<{ key: s
             "Content-Type": row.mimeType || "application/octet-stream",
             "Cache-Control": "public, max-age=31536000, immutable",
             "Content-Length": String(bytes.length),
+            "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
           },
         });
       }
